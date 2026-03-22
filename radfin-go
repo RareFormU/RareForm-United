@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>RedFin-Go</title>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      background: #0b2a3a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+
+   <script>
+  const W = 390;
+  const H = 844;
+
+  let canMove = true;
+
+  const config = {
+    type: Phaser.AUTO,
+    width: W,
+    height: H,
+    backgroundColor: "#0b2a3a",
+    scene: {
+      create() {
+        // Top bar background
+        this.add.rectangle(W / 2, 40, W, 60, 0x000000, 0.35).setDepth(9);
+
+        // Light text
+        this.lightText = this.add.text(W / 2, 40, "GREEN", {
+          fontSize: "32px",
+          color: "#00ff88",
+          fontStyle: "bold"
+        })
+        .setOrigin(0.5)
+        .setDepth(10);
+
+        // Fish
+        this.fish = this.add.circle(W / 2, H - 120, 18, 0xffd54a);
+        this.fish.setStrokeStyle(4, 0x0b1f2a);
+
+        // Toggle light every 2 seconds
+        this.time.addEvent({
+          delay: 2000,
+          loop: true,
+          callback: () => {
+            canMove = !canMove;
+            this.lightText.setText(canMove ? "GREEN" : "RED");
+            this.lightText.setColor(canMove ? "#00ff88" : "#ff4444");
+          }
+        });
+
+        // Input
+        this.input.on("pointerdown", () => {
+          if (!canMove) {
+            this.scene.restart();
+            return;
+          }
+
+          this.tweens.add({
+            targets: this.fish,
+            y: this.fish.y - 40,
+            duration: 120,
+            ease: "Sine.easeOut"
+          });
+        });
+      }
+    }
+  };
+
+  new Phaser.Game(config);
+</script> 
+
+</body>
+</html>
