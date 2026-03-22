@@ -1,0 +1,2083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+<title>RedFin-Go 3D</title>
+<style>
+  body {
+    margin: 0;
+    background: #000;
+    font-family: 'Arial', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    overflow: hidden;
+    touch-action: none;
+  }
+  canvas {
+    display: block;
+    touch-action: none;
+  }
+  #ui {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+    color: #fff;
+    padding: 20px;
+    z-index: 10;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+  }
+  #topBar {
+    display: flex;
+    justify-content: space-between;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+  }
+  #levelText {
+    text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  #hint {
+    position: absolute;
+    top: 140px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 20px;
+    font-weight: 500;
+    color: white;
+    text-align: center;
+    text-shadow: 0 3px 8px rgba(0,0,0,0.9);
+    animation: breathe 2s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    0%, 100% { opacity: 0.9; transform: translateX(-50%) scale(1); }
+    50% { opacity: 1; transform: translateX(-50%) scale(1.05); }
+  }
+  #lightIndicator {
+    position: absolute;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 5px solid rgba(255,255,255,0.3);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 2px 10px rgba(255,255,255,0.1);
+    transition: all 0.3s ease;
+    backdrop-filter: blur(5px);
+  }
+  #lightIndicator.green {
+    background: radial-gradient(circle, #00ff88 0%, #00cc66 100%);
+    border-color: #00ff88;
+    box-shadow: 0 0 40px #00ff88, 0 0 80px rgba(0,255,136,0.5), inset 0 2px 10px rgba(255,255,255,0.3);
+    animation: pulse 0.6s ease-in-out infinite;
+  }
+  #lightIndicator.red {
+    background: radial-gradient(circle, #ff4444 0%, #cc0000 100%);
+    border-color: #ff4444;
+    box-shadow: 0 0 40px #ff4444, 0 0 80px rgba(255,68,68,0.5), inset 0 2px 10px rgba(255,255,255,0.2);
+  }
+  @keyframes pulse {
+    0%, 100% { transform: translate(-50%, 0) scale(1); }
+    50% { transform: translate(-50%, 0) scale(1.08); }
+  }
+  #comboText {
+    position: absolute;
+    top: 180px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 32px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #ffaa00 0%, #ff6600 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 2px 8px rgba(255,102,0,0.8));
+    display: none;
+    letter-spacing: 1px;
+  }
+  #comboText.show {
+    display: block;
+    animation: comboPopIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+  @keyframes comboPopIn {
+    0% { transform: translateX(-50%) scale(0.3) rotate(-5deg); opacity: 0; }
+    100% { transform: translateX(-50%) scale(1) rotate(0deg); opacity: 1; }
+  }
+  #particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .particle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: radial-gradient(circle, #00ff88 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    animation: particleFly 1s ease-out forwards;
+    box-shadow: 0 0 10px #00ff88;
+  }
+  @keyframes particleFly {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+  }
+  #overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.4s ease;
+    pointer-events: none;
+    backdrop-filter: blur(0px);
+  }
+  #overlay.active {
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(10px);
+  }
+  #overlayText {
+    font-size: 28px;
+    font-weight: 700;
+    color: white;
+    text-align: center;
+    line-height: 1.8;
+    text-shadow: 0 4px 12px rgba(0,0,0,0.9);
+    transform: scale(0.9);
+    opacity: 0;
+    transition: all 0.3s ease;
+  }
+  #overlay.active #overlayText {
+    transform: scale(1);
+    opacity: 1;
+  }
+</style>
+</head>
+<body>
+
+<div id="ui">
+  <div id="topBar">
+    <div id="depthText">Depth 0m</div>
+    <div id="levelText">Level 1</div>
+    <div id="bestText">Best 0m</div>
+  </div>
+  <div id="lightIndicator"></div>
+  <div id="comboText"></div>
+  <div id="hint">Tap to start</div>
+</div>
+
+<div id="particles"></div>
+
+<div id="overlay">
+  <div id="overlayText"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+  // CORE RULES
+  const LEVEL_DEPTH_BASE = 15; // Base depth for level 1
+  const DEPTH_INCREASE_PER_LEVEL = 5; // Each level adds 5m
+  const STEP_FORWARD = 2.8;
+  const START_Z = 0;
+
+  // LIGHT TIMING - starts VERY fair, gets harder
+  const GREEN_MIN = 900;
+  const GREEN_MAX = 1500;
+  const RED_MIN = 2200;
+  const RED_MAX = 3200;
+  const FORGIVE_MS = 200;
+
+  // Green light gets SHORTER as levels increase (more pressure!)
+  const GREEN_REDUCTION_PER_LEVEL = 60;
+  const GREEN_MIN_FLOOR = 300; // Never goes below this
+
+  // Red light gets LONGER (more waiting/tension)
+  const RED_INCREASE_PER_LEVEL = 120;
+
+  // CHALLENGES - difficulty scales dramatically
+  const OBSTACLE_BASE_SPAWN_MS = 4500;  // Start VERY fair - first obstacles spawn slowly
+  const OBSTACLE_SPEED_BASE = 5;
+  const OBSTACLE_SPEED_PER_LEVEL = 1.5;
+
+  // Combo system for addiction
+  let combo = 0;
+  let maxCombo = Number(localStorage.getItem("maxCombo") || 0);
+  let lastTapTime = 0;
+  const COMBO_WINDOW = 1500; // 1.5 seconds to maintain combo - more forgiving
+
+  const STATE = { READY: "READY", PLAYING: "PLAYING", FAIL: "FAIL", WIN: "WIN" };
+
+  let scene, camera, renderer;
+  let fish, guardianLight, finishLine;
+  let obstacles = [];
+  let bubbles = [];
+  let causticLight;
+  let waterParticles = [];
+  let jellyfish = []; // Active jellyfish predators
+  let seabedObjects = []; // Track seabed decorations for removal
+
+  let depth = 0;
+  let level = 1;
+  let bestDepth = Number(localStorage.getItem("bestDepth") || 0);
+
+  let isGreen = true;
+  let canTap = false;
+  let lastGreenTime = 0;
+  let gameState = STATE.READY;
+
+  let lightTimeout = null;
+  let obstacleSpawnTimeout = null;
+
+  // UI elements
+  const depthText = document.getElementById('depthText');
+  const bestText = document.getElementById('bestText');
+  const levelText = document.getElementById('levelText');
+  const hintText = document.getElementById('hint');
+  const overlay = document.getElementById('overlay');
+  const overlayText = document.getElementById('overlayText');
+  const lightIndicator = document.getElementById('lightIndicator');
+  const comboText = document.getElementById('comboText');
+  const particlesContainer = document.getElementById('particles');
+
+  init();
+  animate();
+
+  function init() {
+    // Scene
+    scene = new THREE.Scene();
+    
+    // Ocean gradient background with depth fade
+    updateSceneTheme(1); // Start with level 1 theme
+    scene.fog = new THREE.FogExp2(0x001a33, 0.012); // Extends further into distance
+
+    // Camera - angled view to see depth
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 12, 18);
+    camera.lookAt(0, 3, -10);
+
+    // Renderer with N64-style low-poly aesthetic
+    renderer = new THREE.WebGLRenderer({ 
+      antialias: false, // Turn off for pixelated N64 look
+      alpha: false,
+      powerPreference: "high-performance"
+    });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(1); // Lower resolution for retro look
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.BasicShadowMap; // Hard shadows like N64
+    renderer.toneMapping = THREE.NoToneMapping; // Flat colors like N64
+    renderer.toneMappingExposure = 1.0;
+    renderer.outputEncoding = THREE.LinearEncoding; // No color correction
+    document.body.appendChild(renderer.domElement);
+
+    // Main directional light with shadows
+    const mainLight = new THREE.DirectionalLight(0x88ccff, 1.5);
+    mainLight.position.set(10, 25, 10);
+    mainLight.castShadow = true;
+    mainLight.shadow.mapSize.width = 2048;
+    mainLight.shadow.mapSize.height = 2048;
+    mainLight.shadow.camera.near = 0.5;
+    mainLight.shadow.camera.far = 100;
+    mainLight.shadow.camera.left = -50;
+    mainLight.shadow.camera.right = 50;
+    mainLight.shadow.camera.top = 50;
+    mainLight.shadow.camera.bottom = -50;
+    mainLight.shadow.bias = -0.0001;
+    scene.add(mainLight);
+
+    // Fill lights for depth
+    const fillLight1 = new THREE.DirectionalLight(0x4499cc, 0.5);
+    fillLight1.position.set(-15, 10, -10);
+    scene.add(fillLight1);
+
+    const fillLight2 = new THREE.DirectionalLight(0x2266aa, 0.3);
+    fillLight2.position.set(5, 5, 15);
+    scene.add(fillLight2);
+
+    // Rim light for depth
+    const rimLight = new THREE.DirectionalLight(0xaaddff, 0.6);
+    rimLight.position.set(0, 10, -20);
+    scene.add(rimLight);
+
+    // Caustic light effect (moving light patterns)
+    causticLight = new THREE.PointLight(0x88ddff, 0.5, 50);
+    causticLight.position.set(0, 15, 0);
+    scene.add(causticLight);
+
+    // Guardian Light (RED = watching)
+    guardianLight = new THREE.PointLight(0xff4444, 0, 30);
+    guardianLight.position.set(0, 18, -15);
+    scene.add(guardianLight);
+
+    // Ocean floor with lines
+    createOceanFloor();
+
+    // Create underwater atmosphere
+    createUnderwaterEffects();
+
+    // Create Fish (your original design in 3D!)
+    createFish();
+
+    // Finish Line
+    createFinishLine();
+
+    // Input - tap anywhere
+    const handleTap = () => {
+      if (gameState === STATE.READY) {
+        startGame();
+      } else if (gameState === STATE.FAIL) {
+        resetToReady();
+      } else if (gameState === STATE.PLAYING) {
+        onTap();
+      }
+    };
+
+    document.addEventListener('click', handleTap);
+    document.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      handleTap();
+    });
+
+    window.addEventListener('resize', onResize);
+
+    showReady();
+  }
+
+  function updateSceneTheme(levelNum) {
+    // Different ocean themes for each level
+    const themes = [
+      { // Level 1 - Shallow Reef
+        bg: 0x1a4d6e,
+        fog: 0x2a5d7e,
+        coral: [0xff6b9d, 0x9d4edd],
+        name: "Shallow Reef"
+      },
+      { // Level 2 - Tropical Waters
+        bg: 0x0088cc,
+        fog: 0x0099dd,
+        coral: [0xff1493, 0x00ff88],
+        name: "Tropical Waters"
+      },
+      { // Level 3 - Deep Blue
+        bg: 0x001a4d,
+        fog: 0x002a5d,
+        coral: [0x4488ff, 0x8844ff],
+        name: "Deep Blue"
+      },
+      { // Level 4 - Twilight Zone
+        bg: 0x0d0d2b,
+        fog: 0x1a1a3a,
+        coral: [0x6600ff, 0xff0088],
+        name: "Twilight Zone"
+      },
+      { // Level 5 - Midnight Abyss
+        bg: 0x050510,
+        fog: 0x0a0a20,
+        coral: [0x00ffff, 0xff00ff],
+        name: "Midnight Abyss"
+      },
+      { // Level 6+ - The Void (loops)
+        bg: 0x000000,
+        fog: 0x0a0a0a,
+        coral: [0x00ff00, 0xff0000],
+        name: "The Void"
+      }
+    ];
+    
+    const themeIndex = Math.min(levelNum - 1, themes.length - 1);
+    const theme = themes[themeIndex];
+    
+    // Update background and fog
+    scene.background = new THREE.Color(theme.bg);
+    if (scene.fog) {
+      scene.fog.color = new THREE.Color(theme.fog);
+    }
+    
+    // Store current theme for coral spawning
+    scene.userData.currentTheme = theme;
+  }
+
+  function clearSeabedObjects() {
+    // Remove all existing seabed decorations
+    seabedObjects.forEach(obj => {
+      scene.remove(obj);
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) obj.material.dispose();
+    });
+    seabedObjects = [];
+  }
+
+  function createSeabedDecorations() {
+    clearSeabedObjects();
+    
+    const theme = scene.userData.currentTheme || { coral: [0xff6b9d, 0x9d4edd] };
+    const coralColors = theme.coral;
+    
+    // Level-specific seabed objects
+    if (level <= 2) {
+      // Shallow - Coral and colorful plants (N64 low poly)
+      for (let i = 0; i < 25; i++) {
+        const height = Math.random() * 2 + 1;
+        const geometry = new THREE.ConeGeometry(0.3, height, 5); // 5 sides
+        const color = coralColors[Math.random() > 0.5 ? 0 : 1];
+        const material = new THREE.MeshLambertMaterial({ 
+          color: color,
+          emissive: color,
+          emissiveIntensity: 0.3
+        });
+        const coral = new THREE.Mesh(geometry, material);
+        coral.position.set(
+          Math.random() * 60 - 30,
+          height / 2,
+          Math.random() * 100 - 50
+        );
+        coral.castShadow = true;
+        coral.receiveShadow = true;
+        scene.add(coral);
+        seabedObjects.push(coral);
+      }
+    } else if (level <= 4) {
+      // Mid-depth - Rocks and anemones (N64 blocky)
+      for (let i = 0; i < 20; i++) {
+        const size = Math.random() * 1.5 + 0.5;
+        const geometry = new THREE.DodecahedronGeometry(size, 0); // No subdivisions
+        const material = new THREE.MeshLambertMaterial({ 
+          color: 0x4a4a4a
+        });
+        const rock = new THREE.Mesh(geometry, material);
+        rock.position.set(
+          Math.random() * 60 - 30,
+          size / 2,
+          Math.random() * 100 - 50
+        );
+        rock.rotation.set(
+          Math.random() * Math.PI,
+          Math.random() * Math.PI,
+          Math.random() * Math.PI
+        );
+        rock.castShadow = true;
+        rock.receiveShadow = true;
+        scene.add(rock);
+        seabedObjects.push(rock);
+      }
+      
+      // Glowing anemones (low poly)
+      for (let i = 0; i < 15; i++) {
+        const height = Math.random() * 1.5 + 0.8;
+        const geometry = new THREE.CylinderGeometry(0.3, 0.1, height, 6); // 6 sides
+        const color = coralColors[Math.random() > 0.5 ? 0 : 1];
+        const material = new THREE.MeshLambertMaterial({ 
+          color: color,
+          emissive: color,
+          emissiveIntensity: 0.5
+        });
+        const anemone = new THREE.Mesh(geometry, material);
+        anemone.position.set(
+          Math.random() * 60 - 30,
+          height / 2,
+          Math.random() * 100 - 50
+        );
+        scene.add(anemone);
+        seabedObjects.push(anemone);
+      }
+    } else {
+      // Deep/Abyss - Glowing crystals and bioluminescent formations
+      for (let i = 0; i < 18; i++) {
+        const size = Math.random() * 2 + 1;
+        const geometry = new THREE.OctahedronGeometry(size);
+        const color = coralColors[Math.random() > 0.5 ? 0 : 1];
+        const material = new THREE.MeshStandardMaterial({ 
+          color: color,
+          roughness: 0.2,
+          metalness: 0.8,
+          emissive: color,
+          emissiveIntensity: 0.8
+        });
+        const crystal = new THREE.Mesh(geometry, material);
+        crystal.position.set(
+          Math.random() * 60 - 30,
+          size / 2,
+          Math.random() * 100 - 50
+        );
+        crystal.rotation.set(
+          Math.random() * Math.PI,
+          Math.random() * Math.PI,
+          Math.random() * Math.PI
+        );
+        scene.add(crystal);
+        seabedObjects.push(crystal);
+      }
+      
+      // Bioluminescent tubes
+      for (let i = 0; i < 12; i++) {
+        const height = Math.random() * 3 + 2;
+        const geometry = new THREE.CylinderGeometry(0.2, 0.15, height, 8);
+        const color = coralColors[Math.random() > 0.5 ? 0 : 1];
+        const material = new THREE.MeshStandardMaterial({ 
+          color: color,
+          roughness: 0.3,
+          metalness: 0.5,
+          emissive: color,
+          emissiveIntensity: 1
+        });
+        const tube = new THREE.Mesh(geometry, material);
+        tube.position.set(
+          Math.random() * 60 - 30,
+          height / 2,
+          Math.random() * 100 - 50
+        );
+        scene.add(tube);
+        seabedObjects.push(tube);
+      }
+    }
+  }
+
+  function createOceanFloor() {
+    // Ocean floor - sandy bottom (N64 style)
+    const floorGeometry = new THREE.PlaneGeometry(200, 200, 10, 10); // Low poly grid
+    const floorMaterial = new THREE.MeshLambertMaterial({ 
+      color: 0x8b7355
+    });
+    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = 0;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    // Add some texture variation to sand (N64 style)
+    for (let i = 0; i < 20; i++) { // Fewer patches
+      const sandPatch = new THREE.Mesh(
+        new THREE.CircleGeometry(Math.random() * 3 + 1, 6), // Low poly
+        new THREE.MeshLambertMaterial({ 
+          color: 0xa0826d
+        })
+      );
+      sandPatch.rotation.x = -Math.PI / 2;
+      sandPatch.position.set(
+        Math.random() * 100 - 50,
+        0.01,
+        Math.random() * 100 - 50
+      );
+      sandPatch.receiveShadow = true;
+      scene.add(sandPatch);
+    }
+
+    // Create seabed decorations based on level
+    createSeabedDecorations();
+
+    // Seaweed patches
+    for (let i = 0; i < 25; i++) {
+      const seaweedHeight = Math.random() * 3 + 2;
+      const seaweedGeometry = new THREE.CylinderGeometry(0.1, 0.15, seaweedHeight, 8);
+      const seaweedMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x2d5016,
+        roughness: 0.7,
+        metalness: 0.1
+      });
+      const seaweed = new THREE.Mesh(seaweedGeometry, seaweedMaterial);
+      seaweed.position.set(
+        Math.random() * 70 - 35,
+        seaweedHeight / 2,
+        Math.random() * 100 - 50
+      );
+      seaweed.rotation.z = Math.random() * 0.3 - 0.15;
+      seaweed.castShadow = true;
+      seaweed.receiveShadow = true;
+      scene.add(seaweed);
+    }
+
+    // Depth markers (vertical posts) - spaced along the path
+    for (let i = 0; i <= 20; i++) {
+      const z = -i * STEP_FORWARD * 3;
+      const geometry = new THREE.CylinderGeometry(0.08, 0.08, 15, 8);
+      const material = new THREE.MeshStandardMaterial({ 
+        color: 0x1a5490,
+        roughness: 0.5,
+        metalness: 0.4,
+        transparent: true,
+        opacity: 0.4
+      });
+      const marker = new THREE.Mesh(geometry, material);
+      marker.position.set(-18, 7.5, z);
+      marker.castShadow = true;
+      scene.add(marker);
+
+      const marker2 = marker.clone();
+      marker2.position.set(18, 7.5, z);
+      marker2.castShadow = true;
+      scene.add(marker2);
+    }
+  }
+
+  function createUnderwaterEffects() {
+    // Create floating particles (sediment/plankton)
+    for (let i = 0; i < 150; i++) {
+      const geometry = new THREE.SphereGeometry(0.05 + Math.random() * 0.1, 4, 4);
+      const material = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.3 + Math.random() * 0.4,
+        emissive: 0xaaddff,
+        emissiveIntensity: 0.2
+      });
+      const particle = new THREE.Mesh(geometry, material);
+      
+      particle.position.set(
+        (Math.random() - 0.5) * 80,
+        Math.random() * 20,
+        (Math.random() - 0.5) * 100
+      );
+      
+      particle.userData = {
+        speedY: 0.01 + Math.random() * 0.02,
+        speedX: (Math.random() - 0.5) * 0.01,
+        speedZ: (Math.random() - 0.5) * 0.01,
+        drift: Math.random() * Math.PI * 2
+      };
+      
+      scene.add(particle);
+      waterParticles.push(particle);
+    }
+
+    // Create bubble streams
+    for (let i = 0; i < 30; i++) {
+      const bubble = createBubble();
+      bubbles.push(bubble);
+      scene.add(bubble);
+    }
+
+    // Volumetric light shafts (god rays simulation)
+    for (let i = 0; i < 8; i++) {
+      const shaftGeometry = new THREE.ConeGeometry(
+        2 + Math.random() * 3,
+        30,
+        8,
+        1,
+        true
+      );
+      const shaftMaterial = new THREE.MeshBasicMaterial({
+        color: 0x88ccff,
+        transparent: true,
+        opacity: 0.05,
+        side: THREE.DoubleSide
+      });
+      const shaft = new THREE.Mesh(shaftGeometry, shaftMaterial);
+      shaft.position.set(
+        (Math.random() - 0.5) * 40,
+        20,
+        (Math.random() - 0.5) * 60
+      );
+      shaft.rotation.x = Math.PI;
+      scene.add(shaft);
+    }
+
+    // Kelp/seaweed forests in distance - more realistic waving
+    for (let i = 0; i < 40; i++) {
+      const height = 8 + Math.random() * 6;
+      
+      // Create kelp from multiple segments for realistic bending
+      const kelpGroup = new THREE.Group();
+      const segments = 8;
+      const segmentHeight = height / segments;
+      
+      for (let seg = 0; seg < segments; seg++) {
+        const kelpGeometry = new THREE.CylinderGeometry(
+          0.12 - (seg * 0.01),
+          0.15 - (seg * 0.01),
+          segmentHeight,
+          6
+        );
+        const kelpMaterial = new THREE.MeshStandardMaterial({
+          color: seg % 2 === 0 ? 0x1a4d2e : 0x2d5016,
+          roughness: 0.8,
+          metalness: 0.1
+        });
+        const segment = new THREE.Mesh(kelpGeometry, kelpMaterial);
+        segment.position.y = seg * segmentHeight;
+        segment.castShadow = true;
+        segment.receiveShadow = true;
+        kelpGroup.add(segment);
+      }
+      
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 20 + Math.random() * 30;
+      kelpGroup.position.set(
+        Math.cos(angle) * distance,
+        0,
+        Math.sin(angle) * distance
+      );
+      
+      kelpGroup.userData = {
+        segments: kelpGroup.children,
+        swaySpeed: 0.8 + Math.random() * 0.4,
+        swayAmount: 0.15 + Math.random() * 0.15,
+        phase: Math.random() * Math.PI * 2,
+        heightFactor: height
+      };
+      
+      scene.add(kelpGroup);
+      waterParticles.push(kelpGroup);
+    }
+
+    // Schools of small fish in background
+    for (let school = 0; school < 3; school++) {
+      const schoolX = (Math.random() - 0.5) * 60;
+      const schoolY = 3 + Math.random() * 8;
+      const schoolZ = -20 - Math.random() * 40;
+      
+      for (let i = 0; i < 15; i++) {
+        const smallFishGeometry = new THREE.ConeGeometry(0.1, 0.4, 4);
+        const smallFishMaterial = new THREE.MeshStandardMaterial({
+          color: 0x4488aa,
+          roughness: 0.5,
+          metalness: 0.3
+        });
+        const smallFish = new THREE.Mesh(smallFishGeometry, smallFishMaterial);
+        smallFish.rotation.z = -Math.PI / 2;
+        
+        smallFish.position.set(
+          schoolX + (Math.random() - 0.5) * 5,
+          schoolY + (Math.random() - 0.5) * 2,
+          schoolZ + (Math.random() - 0.5) * 5
+        );
+        
+        smallFish.userData = {
+          schoolCenter: { x: schoolX, y: schoolY, z: schoolZ },
+          angle: Math.random() * Math.PI * 2,
+          speed: 0.02 + Math.random() * 0.02,
+          radius: 2 + Math.random() * 3
+        };
+        
+        scene.add(smallFish);
+        waterParticles.push(smallFish);
+      }
+    }
+  }
+
+  function createBubble() {
+    const size = 0.1 + Math.random() * 0.3;
+    const geometry = new THREE.SphereGeometry(size, 8, 8);
+    const material = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.4,
+      roughness: 0.1,
+      metalness: 0.9,
+      envMapIntensity: 1
+    });
+    const bubble = new THREE.Mesh(geometry, material);
+    
+    bubble.position.set(
+      (Math.random() - 0.5) * 40,
+      0,
+      (Math.random() - 0.5) * 60
+    );
+    
+    bubble.userData = {
+      speed: 0.05 + Math.random() * 0.1,
+      wobbleX: Math.random() * Math.PI * 2,
+      wobbleZ: Math.random() * Math.PI * 2,
+      wobbleSpeed: 0.02 + Math.random() * 0.02
+    };
+    
+    return bubble;
+  }
+
+  function updateUnderwaterEffects(delta, time) {
+    // Animate caustic light (moving water surface reflections)
+    if (causticLight) {
+      causticLight.position.x = Math.sin(time * 0.5) * 10;
+      causticLight.position.z = Math.cos(time * 0.3) * 10;
+      causticLight.intensity = 0.4 + Math.sin(time * 2) * 0.2;
+    }
+
+    // Animate water particles
+    waterParticles.forEach((particle, index) => {
+      // Fan fish cheering animation
+      if (particle.isFan) {
+        if (gameState === STATE.PLAYING || gameState === STATE.WIN) {
+          // Bob up and down cheering
+          particle.mesh.position.y = particle.baseY + Math.sin(time * particle.cheerSpeed + particle.cheerPhase) * 0.3;
+          // Lean back and forth
+          particle.mesh.rotation.x = particle.baseRotX + Math.sin(time * particle.cheerSpeed * 0.8 + particle.cheerPhase) * 0.2;
+          // Wave tail
+          if (particle.mesh.children[1]) {
+            particle.mesh.children[1].rotation.y = Math.sin(time * 4 + particle.cheerPhase) * 0.4;
+          }
+        }
+        return;
+      }
+      
+      if (particle.geometry && particle.geometry.type === 'SphereGeometry' && particle.userData && particle.userData.speedY) {
+        // Floating particles
+        particle.position.y += particle.userData.speedY;
+        particle.position.x += Math.sin(time + particle.userData.drift) * 0.02;
+        particle.position.z += Math.cos(time + particle.userData.drift) * 0.02;
+        
+        if (particle.position.y > 25) {
+          particle.position.y = 0;
+        }
+      } else if (particle.userData.segments) {
+        // Realistic kelp wave motion - cascading bend from bottom to top
+        const segments = particle.userData.segments;
+        segments.forEach((segment, i) => {
+          const heightRatio = i / segments.length;
+          const wave = Math.sin(time * particle.userData.swaySpeed + particle.userData.phase + heightRatio * Math.PI);
+          const wave2 = Math.cos(time * particle.userData.swaySpeed * 0.7 + particle.userData.phase);
+          
+          // Bend increases towards top
+          const bendAmount = heightRatio * particle.userData.swayAmount;
+          segment.rotation.z = wave * bendAmount;
+          segment.rotation.x = wave2 * bendAmount * 0.5;
+          
+          // Offset position for cascading effect
+          if (i > 0) {
+            const prevBend = Math.sin(time * particle.userData.swaySpeed + particle.userData.phase + (i-1) / segments.length * Math.PI);
+            segment.position.x = prevBend * bendAmount * 0.3;
+          }
+        });
+      } else if (particle.geometry && particle.geometry.type === 'ConeGeometry' && particle.userData.speed) {
+        // Small fish swimming in schools
+        particle.userData.angle += particle.userData.speed * delta;
+        particle.position.x = particle.userData.schoolCenter.x + 
+          Math.cos(particle.userData.angle) * particle.userData.radius;
+        particle.position.z = particle.userData.schoolCenter.z + 
+          Math.sin(particle.userData.angle) * particle.userData.radius;
+        particle.rotation.y = -particle.userData.angle;
+      }
+    });
+
+    // Animate bubbles
+    bubbles.forEach(bubble => {
+      bubble.position.y += bubble.userData.speed * delta * 60;
+      bubble.userData.wobbleX += bubble.userData.wobbleSpeed;
+      bubble.userData.wobbleZ += bubble.userData.wobbleSpeed * 0.7;
+      
+      bubble.position.x += Math.sin(bubble.userData.wobbleX) * 0.02;
+      bubble.position.z += Math.cos(bubble.userData.wobbleZ) * 0.02;
+      
+      // Reset bubble when it reaches surface
+      if (bubble.position.y > 20) {
+        bubble.position.y = 0;
+        bubble.position.x = (Math.random() - 0.5) * 40;
+        bubble.position.z = (Math.random() - 0.5) * 60;
+      }
+    });
+  }
+
+  function createFish() {
+    fish = new THREE.Group();
+
+    // Body - oval shape like your original
+    const bodyGeometry = new THREE.SphereGeometry(0.9, 24, 16);
+    bodyGeometry.scale(1.5, 1.05, 1);
+    const bodyMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0xff6f00,
+      roughness: 0.4,
+      metalness: 0.6,
+      emissive: 0xff6f00,
+      emissiveIntensity: 0.1
+    });
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.castShadow = true;
+    body.receiveShadow = true;
+    fish.add(body);
+
+    // White outline ring
+    const outlineGeometry = new THREE.TorusGeometry(1.2, 0.12, 8, 24);
+    outlineGeometry.scale(1.1, 0.9, 1);
+    const outlineMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0xffffff,
+      roughness: 0.3,
+      metalness: 0.7,
+      emissive: 0xffffff,
+      emissiveIntensity: 0.3
+    });
+    const outline = new THREE.Mesh(outlineGeometry, outlineMaterial);
+    outline.rotation.y = Math.PI / 2;
+    outline.castShadow = true;
+    fish.add(outline);
+
+    // Eyes - big whites with black pupils
+    const eyeGeometry = new THREE.CircleGeometry(0.35, 16);
+    const eyeMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0xffffff,
+      side: THREE.DoubleSide,
+      roughness: 0.2,
+      metalness: 0.1
+    });
+    
+    const leftEyeWhite = new THREE.Mesh(eyeGeometry, eyeMaterial);
+    leftEyeWhite.position.set(-0.45, 0.3, 1.25);
+    fish.add(leftEyeWhite);
+
+    const rightEyeWhite = new THREE.Mesh(eyeGeometry, eyeMaterial);
+    rightEyeWhite.position.set(0.45, 0.3, 1.25);
+    fish.add(rightEyeWhite);
+
+    // Pupils
+    const pupilGeometry = new THREE.CircleGeometry(0.17, 16);
+    const pupilMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0x000000,
+      side: THREE.DoubleSide,
+      roughness: 0.1,
+      metalness: 0
+    });
+    
+    const leftPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+    leftPupil.position.set(-0.45, 0.2, 1.26);
+    fish.add(leftPupil);
+
+    const rightPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+    rightPupil.position.set(0.45, 0.2, 1.26);
+    fish.add(rightPupil);
+
+    // Tail
+    const tailGeometry = new THREE.ConeGeometry(0.7, 1.3, 8);
+    tailGeometry.rotateZ(Math.PI / 2);
+    const tailMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0xff8f20,
+      roughness: 0.4,
+      metalness: 0.5,
+      emissive: 0xff8f20,
+      emissiveIntensity: 0.1
+    });
+    const tail = new THREE.Mesh(tailGeometry, tailMaterial);
+    tail.position.set(0, 0, -1.4);
+    tail.rotation.y = Math.PI;
+    tail.castShadow = true;
+    fish.add(tail);
+
+    fish.position.set(0, 3, START_Z);
+    fish.rotation.y = Math.PI;
+    fish.castShadow = true;
+    scene.add(fish);
+  }
+
+  function createFinishLine() {
+    // Create checkered finish line on ocean floor (NASCAR style)
+    const currentLevelDepth = LEVEL_DEPTH_BASE + (level - 1) * DEPTH_INCREASE_PER_LEVEL;
+    const finishZ = START_Z - (currentLevelDepth * STEP_FORWARD);
+    
+    // Checkered flag pattern - wider like NASCAR
+    const checkerSize = 2;
+    const checkerCountWidth = 15; // Wide like race track
+    const checkerCountDepth = 3; // Depth of finish line
+    
+    for (let i = 0; i < checkerCountWidth; i++) {
+      for (let j = 0; j < checkerCountDepth; j++) {
+        // Alternate black and white in checkerboard pattern
+        const isBlack = (i + j) % 2 === 0;
+        const color = isBlack ? 0x000000 : 0xffffff;
+        
+        const checkerGeometry = new THREE.PlaneGeometry(checkerSize, checkerSize);
+        const checkerMaterial = new THREE.MeshStandardMaterial({
+          color: color,
+          roughness: 0.7,
+          metalness: 0.2,
+          emissive: color,
+          emissiveIntensity: isBlack ? 0 : 0.3
+        });
+        const checker = new THREE.Mesh(checkerGeometry, checkerMaterial);
+        checker.rotation.x = -Math.PI / 2;
+        checker.position.set(
+          (i - checkerCountWidth / 2) * checkerSize + checkerSize / 2,
+          0.05,
+          finishZ + (j - checkerCountDepth / 2) * checkerSize
+        );
+        checker.receiveShadow = true;
+        
+        if (!finishLine) {
+          finishLine = new THREE.Group();
+          scene.add(finishLine);
+        }
+        finishLine.add(checker);
+      }
+    }
+    
+    // Add glowing border strips on sides (like NASCAR barriers)
+    const stripGeometry = new THREE.PlaneGeometry(1, checkerCountDepth * checkerSize);
+    const stripMaterial = new THREE.MeshStandardMaterial({
+      color: 0x00ff88,
+      emissive: 0x00ff88,
+      emissiveIntensity: 0.5,
+      transparent: true,
+      opacity: 0.8,
+      side: THREE.DoubleSide
+    });
+    
+    // Left strip
+    const leftStrip = new THREE.Mesh(stripGeometry, stripMaterial);
+    leftStrip.rotation.x = -Math.PI / 2;
+    leftStrip.position.set(-(checkerCountWidth * checkerSize) / 2 - 1, 0.1, finishZ);
+    finishLine.add(leftStrip);
+    
+    // Right strip
+    const rightStrip = new THREE.Mesh(stripGeometry, stripMaterial);
+    rightStrip.rotation.x = -Math.PI / 2;
+    rightStrip.position.set((checkerCountWidth * checkerSize) / 2 + 1, 0.1, finishZ);
+    finishLine.add(rightStrip);
+    
+    // Create bleachers with fish fans on both sides
+    createFishBleachers(finishZ);
+    
+    // Create endless ocean scenery beyond finish line
+    createEndlessOcean();
+  }
+
+  function createFishBleachers(finishZ) {
+    // Create full stadium on LEFT and RIGHT sides only (not top/bottom)
+    const currentLevelDepth = LEVEL_DEPTH_BASE + (level - 1) * DEPTH_INCREASE_PER_LEVEL;
+    const trackLength = currentLevelDepth * STEP_FORWARD;
+    
+    // Stadium sections along the entire track
+    const sectionLength = 10;
+    const numSections = Math.ceil(trackLength / sectionLength) + 4;
+    
+    // Only LEFT and RIGHT sides
+    const sides = [-1, 1];
+    
+    for (let section = 0; section < numSections; section++) {
+      const sectionZ = START_Z - (section * sectionLength);
+      
+      sides.forEach(side => {
+        const bleacherX = side * 22;
+        
+        // Bleacher structure - 15 rows reaching all the way to top of screen
+        const rows = 15;
+        const seatsPerSection = 5;
+        
+        for (let row = 0; row < rows; row++) {
+          // Bleacher platform
+          const platformGeometry = new THREE.BoxGeometry(sectionLength * 0.9, 0.3, 2.5);
+          const platformMaterial = new THREE.MeshStandardMaterial({
+            color: 0x8B4513,
+            roughness: 0.8,
+            metalness: 0.1
+          });
+          const platform = new THREE.Mesh(platformGeometry, platformMaterial);
+          
+          platform.position.set(
+            bleacherX + (side * row * 1.5),
+            row * 1.5 + 0.5,
+            sectionZ
+          );
+          
+          platform.castShadow = true;
+          platform.receiveShadow = true;
+          scene.add(platform);
+          
+          // Add fish fans on this row
+          for (let seat = 0; seat < seatsPerSection; seat++) {
+            const fanFish = createFanFish();
+            
+            fanFish.position.set(
+              bleacherX + (side * row * 1.5) + (Math.random() - 0.5),
+              row * 1.5 + 1.2,
+              sectionZ + (seat - seatsPerSection / 2) * 1.8
+            );
+            
+            // Face the track
+            fanFish.rotation.y = side > 0 ? Math.PI : 0;
+            
+            // Random colors
+            const fanColors = [0xff6f00, 0x4488aa, 0xff1493, 0x00ff88, 0xffaa00, 0x9d4edd, 0xff4444, 0x00ffff];
+            const fanColor = fanColors[Math.floor(Math.random() * fanColors.length)];
+            fanFish.children[0].material.color.setHex(fanColor);
+            
+            scene.add(fanFish);
+            
+            // Store for animation
+            waterParticles.push({
+              mesh: fanFish,
+              isFan: true,
+              cheerPhase: Math.random() * Math.PI * 2,
+              cheerSpeed: 2 + Math.random() * 2,
+              baseY: fanFish.position.y,
+              baseRotX: fanFish.rotation.x
+            });
+          }
+        }
+        
+        // Support posts
+        if (section % 3 === 0) {
+          const postGeometry = new THREE.CylinderGeometry(0.3, 0.4, rows * 1.5, 8);
+          const postMaterial = new THREE.MeshStandardMaterial({
+            color: 0x654321,
+            roughness: 0.7,
+            metalness: 0.2
+          });
+          const postMesh = new THREE.Mesh(postGeometry, postMaterial);
+          
+          postMesh.position.set(
+            bleacherX + (side * rows * 1.5 / 2),
+            (rows * 1.5) / 2,
+            sectionZ
+          );
+          postMesh.castShadow = true;
+          scene.add(postMesh);
+        }
+      });
+    }
+    
+    // Giant victory banner at finish line (arched over track)
+    const bannerGeometry = new THREE.PlaneGeometry(40, 5);
+    const bannerMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffcc00,
+      emissive: 0xffcc00,
+      emissiveIntensity: 0.4,
+      side: THREE.DoubleSide
+    });
+    const banner = new THREE.Mesh(bannerGeometry, bannerMaterial);
+    banner.position.set(0, 12, finishZ - 3);
+    banner.rotation.x = Math.PI / 6;
+    scene.add(banner);
+    
+    // Add "FINISH" text to banner
+    const finishTextGeometry = new THREE.PlaneGeometry(20, 3);
+    const finishTextMaterial = new THREE.MeshStandardMaterial({
+      color: 0x000000,
+      side: THREE.DoubleSide
+    });
+    const finishText = new THREE.Mesh(finishTextGeometry, finishTextMaterial);
+    finishText.position.set(0, 12.5, finishZ - 2.8);
+    finishText.rotation.x = Math.PI / 6;
+    scene.add(finishText);
+  }
+
+  function createFanFish() {
+    const fanGroup = new THREE.Group();
+    
+    // Simplified fish body
+    const bodyGeometry = new THREE.SphereGeometry(0.4, 12, 8);
+    bodyGeometry.scale(1.3, 0.8, 0.8);
+    const bodyMaterial = new THREE.MeshStandardMaterial({
+      roughness: 0.5,
+      metalness: 0.3
+    });
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    fanGroup.add(body);
+    
+    // Tail
+    const tailGeometry = new THREE.ConeGeometry(0.25, 0.5, 6);
+    tailGeometry.rotateZ(Math.PI / 2);
+    const tail = new THREE.Mesh(tailGeometry, bodyMaterial);
+    tail.position.set(-0.5, 0, 0);
+    fanGroup.add(tail);
+    
+    // Eyes
+    const eyeGeometry = new THREE.SphereGeometry(0.1, 6, 6);
+    const eyeMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    
+    const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+    leftEye.position.set(0.2, 0.2, 0.3);
+    fanGroup.add(leftEye);
+    
+    const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+    rightEye.position.set(0.2, 0.2, -0.3);
+    fanGroup.add(rightEye);
+    
+    fanGroup.scale.set(0.8, 0.8, 0.8);
+    fanGroup.castShadow = true;
+    
+    return fanGroup;
+  }
+
+  function createEndlessOcean() {
+    // Distant mountains/underwater formations
+    for (let i = 0; i < 8; i++) {
+      const mountainGeometry = new THREE.ConeGeometry(
+        15 + Math.random() * 10,
+        30 + Math.random() * 20,
+        8
+      );
+      const mountainMaterial = new THREE.MeshStandardMaterial({
+        color: 0x1a3a4a,
+        roughness: 0.9,
+        metalness: 0.1,
+        transparent: true,
+        opacity: 0.6
+      });
+      const mountain = new THREE.Mesh(mountainGeometry, mountainMaterial);
+      
+      const angle = (Math.PI * 2 * i) / 8;
+      const distance = 80 + Math.random() * 40;
+      mountain.position.set(
+        Math.cos(angle) * distance,
+        15,
+        Math.sin(angle) * distance - 100
+      );
+      mountain.receiveShadow = true;
+      scene.add(mountain);
+    }
+
+    // Distant kelp forest silhouettes
+    for (let i = 0; i < 30; i++) {
+      const height = 20 + Math.random() * 15;
+      const distantKelpGeometry = new THREE.CylinderGeometry(0.3, 0.5, height, 4);
+      const distantKelpMaterial = new THREE.MeshStandardMaterial({
+        color: 0x0d2818,
+        transparent: true,
+        opacity: 0.4,
+        roughness: 1,
+        metalness: 0
+      });
+      const distantKelp = new THREE.Mesh(distantKelpGeometry, distantKelpMaterial);
+      
+      distantKelp.position.set(
+        (Math.random() - 0.5) * 100,
+        height / 2,
+        -60 - Math.random() * 80
+      );
+      scene.add(distantKelp);
+    }
+
+    // Whale silhouette in the distance
+    const whaleGroup = new THREE.Group();
+    
+    // Whale body (using sphere and cylinder instead of capsule)
+    const whaleBodyGeometry = new THREE.SphereGeometry(3, 16, 12);
+    whaleBodyGeometry.scale(1, 0.8, 2.5);
+    const whaleMaterial = new THREE.MeshStandardMaterial({
+      color: 0x1a1a2e,
+      transparent: true,
+      opacity: 0.3,
+      roughness: 0.8,
+      metalness: 0.2
+    });
+    const whaleBody = new THREE.Mesh(whaleBodyGeometry, whaleMaterial);
+    whaleGroup.add(whaleBody);
+    
+    // Whale tail
+    const tailGeometry = new THREE.BoxGeometry(8, 0.5, 3);
+    const tail = new THREE.Mesh(tailGeometry, whaleMaterial);
+    tail.position.set(-6, 0, 0);
+    whaleGroup.add(tail);
+    
+    whaleGroup.rotation.z = Math.PI / 2;
+    whaleGroup.position.set(30, 8, -120);
+    scene.add(whaleGroup);
+
+    // Mystery deep ocean glow (bioluminescence)
+    for (let i = 0; i < 12; i++) {
+      const glowLight = new THREE.PointLight(
+        Math.random() > 0.5 ? 0x00ffaa : 0x0088ff,
+        0.5,
+        20
+      );
+      glowLight.position.set(
+        (Math.random() - 0.5) * 80,
+        Math.random() * 10,
+        -80 - Math.random() * 80
+      );
+      scene.add(glowLight);
+    }
+
+    // Sunbeams reaching into the depths
+    for (let i = 0; i < 5; i++) {
+      const beamGeometry = new THREE.ConeGeometry(
+        8 + Math.random() * 5,
+        100,
+        8,
+        1,
+        true
+      );
+      const beamMaterial = new THREE.MeshBasicMaterial({
+        color: 0x5599cc,
+        transparent: true,
+        opacity: 0.03,
+        side: THREE.DoubleSide
+      });
+      const beam = new THREE.Mesh(beamGeometry, beamMaterial);
+      beam.position.set(
+        (Math.random() - 0.5) * 60,
+        50,
+        -100 - Math.random() * 50
+      );
+      beam.rotation.x = Math.PI;
+      scene.add(beam);
+    }
+
+    // Distant school of fish (many small dots)
+    const schoolGeometry = new THREE.BufferGeometry();
+    const schoolPositions = [];
+    for (let i = 0; i < 200; i++) {
+      schoolPositions.push(
+        (Math.random() - 0.5) * 60,
+        5 + Math.random() * 10,
+        -70 - Math.random() * 60
+      );
+    }
+    schoolGeometry.setAttribute('position', new THREE.Float32BufferAttribute(schoolPositions, 3));
+    const schoolMaterial = new THREE.PointsMaterial({
+      color: 0x4488aa,
+      size: 0.3,
+      transparent: true,
+      opacity: 0.6
+    });
+    const distantSchool = new THREE.Points(schoolGeometry, schoolMaterial);
+    scene.add(distantSchool);
+
+    // Ethereal jellyfish in distance (decorative, not predators)
+    for (let i = 0; i < 5; i++) {
+      const jellyfishGeometry = new THREE.SphereGeometry(1.5, 8, 6);
+      const jellyfishMaterial = new THREE.MeshStandardMaterial({
+        color: 0x88ccff,
+        transparent: true,
+        opacity: 0.2,
+        emissive: 0x88ccff,
+        emissiveIntensity: 0.1
+      });
+      const jellyfish = new THREE.Mesh(jellyfishGeometry, jellyfishMaterial);
+      jellyfish.position.set(
+        (Math.random() - 0.5) * 50,
+        8 + Math.random() * 8,
+        -60 - Math.random() * 40
+      );
+      
+      // Add tentacles
+      for (let t = 0; t < 6; t++) {
+        const tentacleGeometry = new THREE.CylinderGeometry(0.05, 0.02, 3, 4);
+        const tentacle = new THREE.Mesh(tentacleGeometry, jellyfishMaterial);
+        const angle = (Math.PI * 2 * t) / 6;
+        tentacle.position.set(
+          Math.cos(angle) * 0.8,
+          -1.5,
+          Math.sin(angle) * 0.8
+        );
+        jellyfish.add(tentacle);
+      }
+      
+      scene.add(jellyfish);
+    }
+  }
+
+  function showReady() {
+    stopLight();
+    stopObstacles();
+
+    gameState = STATE.READY;
+    level = 1;
+    depth = 0;
+
+    isGreen = true;
+    canTap = false;
+    guardianLight.intensity = 0;
+
+    fish.position.set(0, 4, START_Z);
+    fish.scale.set(1, 1, 1);
+
+    // Remove old finish line and create new one for current level
+    if (finishLine) {
+      scene.remove(finishLine);
+      finishLine.children.forEach(child => {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) child.material.dispose();
+      });
+    }
+    createFinishLine();
+
+    depthText.textContent = "Depth 0m";
+    bestText.textContent = `Best ${bestDepth}m`;
+    levelText.textContent = "Level 1";
+    hintText.textContent = "Tap to start";
+    hintText.style.display = 'block';
+
+    lightIndicator.className = '';
+
+    overlay.classList.remove('active');
+    overlayText.textContent = "";
+  }
+
+  function startGame() {
+    stopLight();
+    stopObstacles();
+
+    gameState = STATE.PLAYING;
+    depth = 0;
+    combo = 0;
+
+    hintText.style.display = 'none';
+    overlay.classList.remove('active');
+    overlayText.textContent = "";
+    comboText.textContent = "";
+    comboText.classList.remove('show');
+
+    isGreen = true;
+    canTap = true;
+    guardianLight.intensity = 0;
+    lastGreenTime = Date.now();
+    lastTapTime = Date.now();
+
+    fish.position.set(0, 3, START_Z);
+
+    lightIndicator.className = 'green';
+
+    scheduleNextLight();
+    if (level >= 2) startObstacles();
+    if (level >= 3) startJellyfish();
+
+    depthText.textContent = "Depth 0m";
+    levelText.textContent = `Level ${level}`;
+  }
+
+  function resetToReady() {
+    showReady();
+  }
+
+  function stopLight() {
+    if (lightTimeout) {
+      clearTimeout(lightTimeout);
+      lightTimeout = null;
+    }
+  }
+
+  // --- OBSTACLES SYSTEM (Level 2+) ---
+  function stopObstacles() {
+    if (obstacleSpawnTimeout) {
+      clearTimeout(obstacleSpawnTimeout);
+      obstacleSpawnTimeout = null;
+    }
+    obstacles.forEach(obs => scene.remove(obs.mesh));
+    obstacles = [];
+  }
+
+  // --- JELLYFISH PREDATORS (Level 3+) ---
+  function stopJellyfish() {
+    jellyfish.forEach(jelly => scene.remove(jelly.mesh));
+    jellyfish = [];
+  }
+
+  function startJellyfish() {
+    stopJellyfish();
+    
+    // Spawn 2-4 jellyfish based on level
+    const jellyfishCount = Math.min(2 + Math.floor((level - 3) / 2), 6);
+    
+    for (let i = 0; i < jellyfishCount; i++) {
+      setTimeout(() => {
+        if (gameState === STATE.PLAYING) {
+          spawnJellyfish();
+        }
+      }, i * 1500);
+    }
+  }
+
+  function spawnJellyfish() {
+    const jellyfishGroup = new THREE.Group();
+    
+    // Bell/dome
+    const bellGeometry = new THREE.SphereGeometry(0.8, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+    const jellyfishColor = Math.random() > 0.5 ? 0xff1493 : 0x9d4edd;
+    const bellMaterial = new THREE.MeshStandardMaterial({
+      color: jellyfishColor,
+      transparent: true,
+      opacity: 0.6,
+      emissive: jellyfishColor,
+      emissiveIntensity: 0.4,
+      side: THREE.DoubleSide
+    });
+    const bell = new THREE.Mesh(bellGeometry, bellMaterial);
+    jellyfishGroup.add(bell);
+    
+    // Tentacles (8 dangerous tentacles)
+    for (let t = 0; t < 8; t++) {
+      const tentacleGeometry = new THREE.CylinderGeometry(0.04, 0.02, 2.5, 4);
+      const tentacle = new THREE.Mesh(tentacleGeometry, bellMaterial);
+      const angle = (Math.PI * 2 * t) / 8;
+      tentacle.position.set(
+        Math.cos(angle) * 0.5,
+        -1.25,
+        Math.sin(angle) * 0.5
+      );
+      tentacle.rotation.x = (Math.random() - 0.5) * 0.3;
+      tentacle.rotation.z = (Math.random() - 0.5) * 0.3;
+      jellyfishGroup.add(tentacle);
+    }
+    
+    // Position in the path ahead
+    const minSpawnDistance = 8 * STEP_FORWARD;
+    const maxSpawnDistance = 20 * STEP_FORWARD;
+    const spawnZ = fish.position.z - minSpawnDistance - Math.random() * (maxSpawnDistance - minSpawnDistance);
+    
+    jellyfishGroup.position.set(
+      (Math.random() - 0.5) * 15,
+      3 + Math.random() * 6,
+      spawnZ
+    );
+    
+    jellyfishGroup.castShadow = true;
+    scene.add(jellyfishGroup);
+    
+    jellyfish.push({
+      mesh: jellyfishGroup,
+      pulsePhase: Math.random() * Math.PI * 2,
+      driftPhase: Math.random() * Math.PI * 2,
+      baseY: jellyfishGroup.position.y,
+      baseX: jellyfishGroup.position.x
+    });
+  }
+
+  function updateJellyfish(delta, time) {
+    for (let i = jellyfish.length - 1; i >= 0; i--) {
+      const jelly = jellyfish[i];
+      
+      // Pulsing motion
+      const pulse = Math.sin(time * 2 + jelly.pulsePhase);
+      jelly.mesh.scale.y = 1 + pulse * 0.15;
+      jelly.mesh.scale.x = 1 - pulse * 0.1;
+      jelly.mesh.scale.z = 1 - pulse * 0.1;
+      
+      // Gentle floating drift
+      jelly.mesh.position.y = jelly.baseY + Math.sin(time + jelly.driftPhase) * 0.8;
+      jelly.mesh.position.x = jelly.baseX + Math.cos(time * 0.5 + jelly.driftPhase) * 2;
+      
+      // Rotate tentacles
+      jelly.mesh.children.forEach((child, idx) => {
+        if (idx > 0) { // Skip bell
+          child.rotation.x = Math.sin(time * 3 + idx) * 0.2;
+          child.rotation.z = Math.cos(time * 2.5 + idx) * 0.2;
+        }
+      });
+      
+      // Cleanup if behind player
+      const distanceBehind = jelly.mesh.position.z - fish.position.z;
+      if (distanceBehind > 10) {
+        scene.remove(jelly.mesh);
+        jellyfish.splice(i, 1);
+        continue;
+      }
+      
+      // Collision detection
+      const dx = jelly.mesh.position.x - fish.position.x;
+      const dy = jelly.mesh.position.y - fish.position.y;
+      const dz = jelly.mesh.position.z - fish.position.z;
+      const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      
+      if (distance < 2.5) {
+        fail("JELLYFISH");
+        return;
+      }
+    }
+  }
+
+  function startObstacles() {
+    stopObstacles();
+    scheduleObstacleSpawn();
+  }
+
+  function scheduleObstacleSpawn() {
+    if (gameState !== STATE.PLAYING || level < 2) return;
+
+    const jitter = -300 + Math.random() * 800;
+    // Difficulty ramps up significantly
+    const levelFactor = Math.pow(1.15, level - 2); // Exponential increase
+    const delay = Math.max(600, OBSTACLE_BASE_SPAWN_MS / levelFactor + jitter);
+
+    obstacleSpawnTimeout = setTimeout(() => {
+      if (gameState !== STATE.PLAYING) return;
+      spawnObstacle();
+      scheduleObstacleSpawn();
+    }, delay);
+  }
+
+  function spawnObstacle() {
+    const types = ['eel', 'shark', 'log', 'reef'];
+    // Level 2-3: mostly eels
+    // Level 4-5: add sharks
+    // Level 6+: all obstacle types
+    let availableTypes = ['eel'];
+    if (level >= 4) availableTypes.push('shark');
+    if (level >= 6) availableTypes = types;
+
+    const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+    
+    // Spawn obstacles at 5m+ depth (in front of fish)
+    const minSpawnDistance = 5 * STEP_FORWARD;
+    const maxSpawnDistance = 15 * STEP_FORWARD;
+    const spawnZ = fish.position.z - minSpawnDistance - Math.random() * (maxSpawnDistance - minSpawnDistance);
+    
+    const y = 2 + Math.random() * 4;
+    const side = Math.random() > 0.5 ? 1 : -1;
+    const xStart = side * (15 + Math.random() * 10);
+
+    let mesh, size, hitRadius;
+
+    if (type === 'eel') {
+      // Electric eel - cyan cylinder
+      const length = 3 + Math.random() * 2;
+      const geometry = new THREE.CylinderGeometry(0.35, 0.45, length, 8);
+      geometry.rotateZ(Math.PI / 2);
+      const material = new THREE.MeshStandardMaterial({ 
+        color: 0x00ffff,
+        roughness: 0.3,
+        metalness: 0.7,
+        emissive: 0x00ffff,
+        emissiveIntensity: 0.4
+      });
+      mesh = new THREE.Mesh(geometry, material);
+      mesh.castShadow = true;
+      size = length;
+      hitRadius = 2;
+    } else if (type === 'shark') {
+      // Shark - gray with fin
+      const bodyGeometry = new THREE.ConeGeometry(0.6, 3, 8);
+      bodyGeometry.rotateZ(-Math.PI / 2);
+      const material = new THREE.MeshStandardMaterial({ 
+        color: 0x555555,
+        roughness: 0.6,
+        metalness: 0.4
+      });
+      mesh = new THREE.Mesh(bodyGeometry, material);
+      
+      // Dorsal fin
+      const finGeometry = new THREE.ConeGeometry(0.3, 0.8, 4);
+      const fin = new THREE.Mesh(finGeometry, material);
+      fin.position.set(0, 0.5, 0);
+      mesh.add(fin);
+      
+      mesh.castShadow = true;
+      size = 3;
+      hitRadius = 2.5;
+    } else if (type === 'log') {
+      // Floating log - brown cylinder
+      const length = 4 + Math.random() * 2;
+      const geometry = new THREE.CylinderGeometry(0.5, 0.5, length, 12);
+      geometry.rotateZ(Math.PI / 2);
+      const material = new THREE.MeshStandardMaterial({ 
+        color: 0x654321,
+        roughness: 0.8,
+        metalness: 0.1
+      });
+      mesh = new THREE.Mesh(geometry, material);
+      mesh.castShadow = true;
+      size = length;
+      hitRadius = 2.2;
+    } else { // reef
+      // Coral reef chunk - purple/pink
+      const geometry = new THREE.DodecahedronGeometry(1.2);
+      const reefColor = Math.random() > 0.5 ? 0xff1493 : 0x9d4edd;
+      const material = new THREE.MeshStandardMaterial({ 
+        color: reefColor,
+        roughness: 0.5,
+        metalness: 0.3,
+        emissive: reefColor,
+        emissiveIntensity: 0.2
+      });
+      mesh = new THREE.Mesh(geometry, material);
+      mesh.castShadow = true;
+      size = 1.5;
+      hitRadius = 2;
+    }
+
+    mesh.position.set(xStart, y, spawnZ);
+    scene.add(mesh);
+
+    // Swimming pattern - oscillate across path
+    const swimPattern = Math.random() > 0.5 ? 'sine' : 'straight';
+    const baseSpeed = (OBSTACLE_SPEED_BASE + (level - 1) * OBSTACLE_SPEED_PER_LEVEL);
+    
+    obstacles.push({ 
+      mesh, 
+      size, 
+      hitRadius, 
+      type,
+      swimPattern,
+      direction: -side,
+      baseSpeed,
+      time: 0,
+      startX: xStart,
+      amplitude: 3 + Math.random() * 4
+    });
+  }
+
+  function updateObstacles(delta) {
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+      const obs = obstacles[i];
+      obs.time += delta;
+      
+      // Swimming motion
+      if (obs.swimPattern === 'sine') {
+        // Sine wave swimming pattern
+        obs.mesh.position.x = obs.startX + Math.sin(obs.time * 2) * obs.amplitude;
+        
+        // Rotate to face direction of movement
+        const previousX = obs.startX + Math.sin((obs.time - delta) * 2) * obs.amplitude;
+        const dx = obs.mesh.position.x - previousX;
+        if (Math.abs(dx) > 0.01) {
+          obs.mesh.rotation.y = Math.atan2(dx, 0) * obs.direction;
+        }
+      } else {
+        // Straight movement
+        obs.mesh.position.x += obs.direction * obs.baseSpeed * delta;
+      }
+
+      // Rotate for visual interest (logs and reef)
+      if (obs.type === 'log' || obs.type === 'reef') {
+        obs.mesh.rotation.y += delta * 0.5;
+      }
+      
+      // Body wiggle for living creatures
+      if (obs.type === 'eel' || obs.type === 'shark') {
+        obs.mesh.rotation.z = Math.sin(obs.time * 5) * 0.1;
+      }
+
+      // Cleanup if behind player or too far away
+      const distanceBehind = obs.mesh.position.z - fish.position.z;
+      if (distanceBehind > 10 || Math.abs(obs.mesh.position.x) > 40) {
+        scene.remove(obs.mesh);
+        obstacles.splice(i, 1);
+        continue;
+      }
+
+      // Collision check - only if obstacle is near fish depth
+      const dz = Math.abs(obs.mesh.position.z - fish.position.z);
+      if (dz < 3) {
+        const dx = Math.abs(obs.mesh.position.x - fish.position.x);
+        const dy = Math.abs(obs.mesh.position.y - fish.position.y);
+
+        if (dx < obs.hitRadius && dy < 1.5) {
+          fail(obs.type.toUpperCase());
+          return;
+        }
+      }
+    }
+  }
+
+  function onTap() {
+    // RED tap = fail (with forgiveness)
+    if (!canTap) {
+      if (Date.now() - lastGreenTime < FORGIVE_MS) return;
+      return fail("IMPULSE");
+    }
+
+    // Check combo
+    const now = Date.now();
+    if (now - lastTapTime < COMBO_WINDOW) {
+      combo++;
+      if (combo > maxCombo) {
+        maxCombo = combo;
+        localStorage.setItem("maxCombo", maxCombo);
+      }
+    } else {
+      combo = 1;
+    }
+    lastTapTime = now;
+
+    // Show combo
+    if (combo > 1) {
+      comboText.textContent = `${combo}x COMBO!`;
+      comboText.classList.remove('show');
+      void comboText.offsetWidth; // Force reflow
+      comboText.classList.add('show');
+    }
+
+    // Successful GREEN tap
+    depth += 1;
+
+    if (depth > bestDepth) {
+      bestDepth = depth;
+      localStorage.setItem("bestDepth", bestDepth);
+    }
+
+    depthText.textContent = `Depth ${depth}m`;
+    bestText.textContent = `Best ${bestDepth}m`;
+
+    // Move fish forward
+    const targetZ = START_Z - (depth * STEP_FORWARD);
+    animateFishMove(targetZ);
+
+    // Juicy feedback!
+    createParticles();
+    
+    // Scale increases with combo
+    const scaleBoost = Math.min(1.6, 1.35 + (combo * 0.05));
+    fish.scale.set(scaleBoost, scaleBoost, scaleBoost);
+    setTimeout(() => {
+      fish.scale.set(1, 1, 1);
+    }, 140);
+
+    // Haptic feedback for mobile
+    if (navigator.vibrate) {
+      navigator.vibrate(combo > 5 ? 30 : 15);
+    }
+
+    // Check level complete
+    if (depth >= LEVEL_DEPTH_BASE + (level - 1) * DEPTH_INCREASE_PER_LEVEL) {
+      completeLevel();
+    }
+  }
+
+  function createParticles() {
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+    
+    for (let i = 0; i < 12; i++) { // More particles
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+      
+      const angle = (Math.PI * 2 * i) / 12;
+      const distance = 60 + Math.random() * 80;
+      const tx = Math.cos(angle) * distance;
+      const ty = Math.sin(angle) * distance;
+      
+      particle.style.left = centerX + 'px';
+      particle.style.top = centerY + 'px';
+      particle.style.setProperty('--tx', tx + 'px');
+      particle.style.setProperty('--ty', ty + 'px');
+      
+      particlesContainer.appendChild(particle);
+      
+      setTimeout(() => particle.remove(), 1000);
+    }
+  }
+
+  function animateFishMove(targetZ) {
+    const startZ = fish.position.z;
+    const startTime = Date.now();
+    const duration = 180; // Smoother, slightly longer
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Smooth ease out with bounce
+      const eased = 1 - Math.pow(1 - progress, 4);
+      fish.position.z = startZ + (targetZ - startZ) * eased;
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+    animate();
+  }
+
+  function completeLevel() {
+    gameState = STATE.WIN;
+    canTap = false;
+    stopLight();
+    stopObstacles();
+    stopJellyfish();
+
+    overlay.classList.add('active');
+    const currentLevelDepth = LEVEL_DEPTH_BASE + (level - 1) * DEPTH_INCREASE_PER_LEVEL;
+    overlayText.innerHTML = `🎉 LEVEL ${level} COMPLETE! 🎉<br>${currentLevelDepth}m depth!<br>Max Combo: ${maxCombo}x`;
+
+    // Flash finish line strips
+    if (finishLine && finishLine.children.length > 0) {
+      const leftStrip = finishLine.children[finishLine.children.length - 2];
+      const rightStrip = finishLine.children[finishLine.children.length - 1];
+      
+      let flashCount = 0;
+      const flashInterval = setInterval(() => {
+        if (leftStrip.material && rightStrip.material) {
+          const newIntensity = leftStrip.material.emissiveIntensity > 0.3 ? 0.5 : 1;
+          leftStrip.material.emissiveIntensity = newIntensity;
+          rightStrip.material.emissiveIntensity = newIntensity;
+        }
+        flashCount++;
+        if (flashCount > 6) {
+          clearInterval(flashInterval);
+          if (leftStrip.material) leftStrip.material.emissiveIntensity = 0.5;
+          if (rightStrip.material) rightStrip.material.emissiveIntensity = 0.5;
+        }
+      }, 150);
+    }
+
+    // Celebration particles
+    for (let i = 0; i < 20; i++) {
+      setTimeout(() => createParticles(), i * 50);
+    }
+
+    setTimeout(() => {
+      advanceToNextLevel();
+    }, 1200);
+  }
+
+  function advanceToNextLevel() {
+    level += 1;
+    depth = 0;
+    combo = 0;
+
+    // Update scene theme for new level
+    updateSceneTheme(level);
+    
+    // Update seabed decorations for new level
+    createSeabedDecorations();
+
+    fish.position.set(0, 3, START_Z);
+    fish.scale.set(1, 1, 1);
+
+    // Remove old finish line and create new one for next level
+    if (finishLine) {
+      scene.remove(finishLine);
+      finishLine.children.forEach(child => {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) child.material.dispose();
+      });
+    }
+    createFinishLine();
+
+    const currentLevelDepth = LEVEL_DEPTH_BASE + (level - 1) * DEPTH_INCREASE_PER_LEVEL;
+
+    depthText.textContent = "Depth 0m";
+    levelText.textContent = `Level ${level} (${currentLevelDepth}m)`;
+    overlay.classList.remove('active');
+    overlayText.textContent = "";
+    comboText.textContent = "";
+    comboText.classList.remove('show');
+
+    gameState = STATE.PLAYING;
+    isGreen = true;
+    canTap = true;
+    guardianLight.intensity = 0;
+    lastGreenTime = Date.now();
+    lastTapTime = Date.now();
+
+    lightIndicator.className = 'green';
+
+    scheduleNextLight();
+    if (level >= 2) startObstacles();
+    if (level >= 3) startJellyfish();
+  }
+
+  function fail(reason) {
+    gameState = STATE.FAIL;
+    canTap = false;
+    stopLight();
+    stopObstacles();
+    stopJellyfish();
+
+    guardianLight.intensity = 3;
+    overlay.classList.add('active');
+    overlayText.innerHTML = `CAUGHT!<br>${reason}<br>Depth ${depth}m<br>Tap to retry`;
+
+    // Shake camera
+    const originalY = camera.position.y;
+    let shakeCount = 0;
+    const shakeInterval = setInterval(() => {
+      camera.position.y = originalY + (Math.random() - 0.5) * 0.5;
+      shakeCount++;
+      if (shakeCount > 10) {
+        clearInterval(shakeInterval);
+        camera.position.y = originalY;
+      }
+    }, 30);
+
+    // Sink fish
+    const sinkInterval = setInterval(() => {
+      fish.position.y -= 0.15;
+      if (fish.position.y < -3) clearInterval(sinkInterval);
+    }, 40);
+  }
+
+  function scheduleNextLight() {
+    if (gameState !== STATE.PLAYING) return;
+
+    // Progressive difficulty - green gets shorter, red gets longer
+    const greenReduction = Math.min((level - 1) * GREEN_REDUCTION_PER_LEVEL, GREEN_MIN - GREEN_MIN_FLOOR);
+    const redIncrease = (level - 1) * RED_INCREASE_PER_LEVEL;
+
+    const greenMin = Math.max(GREEN_MIN_FLOOR, GREEN_MIN - greenReduction);
+    const greenMax = Math.max(GREEN_MIN_FLOOR + 200, GREEN_MAX - greenReduction);
+    const redMin = RED_MIN + redIncrease;
+    const redMax = RED_MAX + redIncrease;
+
+    const duration = isGreen
+      ? greenMin + Math.random() * (greenMax - greenMin)
+      : redMin + Math.random() * (redMax - redMin);
+
+    lightTimeout = setTimeout(() => {
+      if (gameState !== STATE.PLAYING) return;
+
+      isGreen = !isGreen;
+      canTap = isGreen;
+
+      guardianLight.intensity = isGreen ? 0 : 3;
+      lightIndicator.className = isGreen ? 'green' : 'red';
+
+      if (isGreen) lastGreenTime = Date.now();
+
+      scheduleNextLight();
+    }, duration);
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+
+    const delta = 1 / 60;
+    const time = Date.now() * 0.001;
+
+    if (gameState === STATE.PLAYING) {
+      updateObstacles(delta);
+      updateJellyfish(delta, time);
+    }
+
+    // Update underwater effects
+    updateUnderwaterEffects(delta, time);
+
+    // Idle sway
+    if (gameState === STATE.READY || gameState === STATE.PLAYING) {
+      fish.position.x = Math.sin(Date.now() * 0.003) * 0.4;
+    }
+
+    // Tail wag
+    if (fish && fish.children[5]) {
+      fish.children[5].rotation.x = Math.sin(Date.now() * 0.008) * 0.3;
+    }
+
+    // Camera follows fish - first person swimming perspective
+    if (gameState === STATE.PLAYING) {
+      // Smooth camera follow with slight delay for natural feel
+      const targetCamX = fish.position.x * 0.4;
+      const targetCamY = fish.position.y + 4;
+      const targetCamZ = fish.position.z + 10;
+      
+      camera.position.x += (targetCamX - camera.position.x) * 0.1;
+      camera.position.y += (targetCamY - camera.position.y) * 0.05;
+      camera.position.z += (targetCamZ - camera.position.z) * 0.1;
+      
+      // Look ahead in direction of travel with slight downward angle
+      const lookAheadZ = fish.position.z - 15;
+      const lookAtX = fish.position.x * 0.3;
+      const lookAtY = fish.position.y;
+      
+      camera.lookAt(lookAtX, lookAtY, lookAheadZ);
+      
+      // Gentle camera sway to simulate swimming motion
+      camera.position.x += Math.sin(time * 1.5) * 0.15;
+      camera.position.y += Math.cos(time * 2) * 0.1;
+      camera.rotation.z = Math.sin(time * 1.2) * 0.02;
+    } else if (gameState === STATE.READY) {
+      // Reset camera to starting position
+      camera.position.set(0, 12, 18);
+      camera.lookAt(0, 3, -10);
+      camera.rotation.z = 0;
+    }
+
+    renderer.render(scene, camera);
+  }
+
+  function onResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+})();
+</script>
+
+</body>
+</html>
