@@ -1,0 +1,2093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Esoteric Unlock V2</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a0a2e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: filter 0.5s ease, opacity 0.5s ease;
+        }
+
+        body.low-integrity {
+            filter: grayscale(30%) brightness(0.85);
+            opacity: 0.9;
+        }
+
+        body.high-integrity {
+            filter: brightness(1.1) contrast(1.05);
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: rgba(20, 20, 40, 0.9);
+            border: 2px solid #4a4a8a;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 0 40px rgba(100, 100, 200, 0.3);
+            transition: box-shadow 0.5s ease, border-color 0.5s ease;
+        }
+
+        .container.low-integrity {
+            box-shadow: 0 0 20px rgba(80, 80, 120, 0.2);
+            border-color: #3a3a6a;
+        }
+
+        .container.high-integrity {
+            box-shadow: 0 0 60px rgba(120, 120, 255, 0.4);
+            border-color: #5a5aaa;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #4a4a8a;
+        }
+
+        .header h1 {
+            color: #a0a0ff;
+            font-size: 2em;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(160, 160, 255, 0.5);
+            transition: text-shadow 0.5s ease, color 0.5s ease;
+        }
+
+        .low-integrity .header h1 {
+            text-shadow: 0 0 5px rgba(140, 140, 200, 0.3);
+            color: #8a8acc;
+        }
+
+        .high-integrity .header h1 {
+            text-shadow: 0 0 20px rgba(180, 180, 255, 0.7);
+            color: #c0c0ff;
+        }
+
+        .header .tagline {
+            color: #8a8aaa;
+            font-style: italic;
+            transition: color 0.5s ease;
+        }
+
+        .low-integrity .header .tagline {
+            color: #6a6a8a;
+        }
+
+        .high-integrity .header .tagline {
+            color: #aaaacc;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: rgba(50, 50, 80, 0.5);
+            border-radius: 5px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-label {
+            color: #8a8aaa;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            color: #a0ffa0;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .chakras {
+            margin-bottom: 30px;
+        }
+
+        .chakra {
+            background: rgba(40, 40, 70, 0.6);
+            border: 1px solid #5a5a9a;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .low-integrity .chakra {
+            background: rgba(35, 35, 60, 0.5);
+            border-color: #4a4a7a;
+        }
+
+        .high-integrity .chakra {
+            background: rgba(45, 45, 80, 0.7);
+            border-color: #6a6aaa;
+        }
+
+        .chakra:hover {
+            background: rgba(50, 50, 90, 0.8);
+            border-color: #7a7aba;
+        }
+
+        .low-integrity .chakra:hover {
+            background: rgba(45, 45, 75, 0.7);
+            border-color: #6a6a9a;
+        }
+
+        .high-integrity .chakra:hover {
+            background: rgba(55, 55, 95, 0.9);
+            border-color: #8a8aca;
+        }
+
+        .chakra.unlocked {
+            background: rgba(50, 80, 50, 0.6);
+            border-color: #6a9a6a;
+        }
+
+        .chakra-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .chakra-name {
+            color: #c0c0ff;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        .chakra-progress {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .progress-text {
+            color: #a0a0ff;
+            font-size: 0.9em;
+        }
+
+        .streak {
+            color: #ffaa00;
+            font-size: 0.9em;
+        }
+
+        .chakra-info {
+            color: #9a9aaa;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .practice-btn {
+            background: #4a4a9a;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .practice-btn:hover {
+            background: #6a6aba;
+            transform: translateY(-2px);
+        }
+
+        .practice-btn:disabled {
+            background: #3a3a5a;
+            color: #6a6a7a;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: rgba(30, 30, 60, 0.95);
+            border: 2px solid #6a6aba;
+            border-radius: 10px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .veil {
+            color: #ff8a8a;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+        }
+
+        .practice-text {
+            color: #a0ffa0;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .lesson {
+            color: #ffaa00;
+            font-style: italic;
+            margin-bottom: 25px;
+            font-size: 1em;
+        }
+
+        .complete-btn {
+            background: #4aaa4a;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .complete-btn:hover {
+            background: #5aba5a;
+            transform: scale(1.05);
+        }
+
+        .ai-guide {
+            background: rgba(60, 40, 80, 0.5);
+            border: 1px solid #7a5aaa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .ai-guide-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            color: #c0a0ff;
+            font-size: 1.1em;
+        }
+
+        .ai-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #6a4aaa, #8a6aca);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+        }
+
+        .stage-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .stage-tab {
+            flex: 1;
+            background: rgba(50, 50, 80, 0.6);
+            border: 1px solid #5a5a9a;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s;
+            color: #8a8aaa;
+        }
+
+        .stage-tab.active {
+            background: rgba(80, 60, 120, 0.8);
+            border-color: #8a6aca;
+            color: #e0c0ff;
+            font-weight: bold;
+        }
+
+        .stage-tab:hover:not(.active) {
+            background: rgba(60, 60, 90, 0.7);
+        }
+
+        .stage-content {
+            display: none;
+        }
+
+        .stage-content.active {
+            display: block;
+        }
+
+        .guide-text {
+            color: #b0b0d0;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .guide-video {
+            background: rgba(30, 30, 50, 0.8);
+            border: 2px dashed #6a6aaa;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            color: #8a8aaa;
+            margin: 15px 0;
+        }
+
+        .guide-animation {
+            font-size: 3em;
+            margin-bottom: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+
+        .guide-steps {
+            background: rgba(40, 40, 70, 0.5);
+            border-left: 3px solid #7a5aaa;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .guide-step {
+            color: #b0b0d0;
+            margin: 10px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .guide-step::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #8a6aca;
+        }
+
+        .try-input {
+            background: rgba(40, 40, 70, 0.8);
+            border: 2px solid #6a6aaa;
+            border-radius: 5px;
+            padding: 15px;
+            color: #e0e0e0;
+            width: 100%;
+            font-family: 'Courier New', monospace;
+            margin: 15px 0;
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .try-feedback {
+            background: rgba(60, 80, 60, 0.4);
+            border: 1px solid #6aaa6a;
+            border-radius: 5px;
+            padding: 15px;
+            color: #a0ffa0;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .try-feedback.active {
+            display: block;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .nav-btn {
+            flex: 1;
+            background: #5a5a9a;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+        }
+
+        .nav-btn:hover {
+            background: #6a6aba;
+        }
+
+        .nav-btn.primary {
+            background: #4aaa4a;
+        }
+
+        .nav-btn.primary:hover {
+            background: #5aba5a;
+        }
+
+        .challenges-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #4a4a8a;
+        }
+
+        .challenges-header {
+            color: #ffa500;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .challenge-tier {
+            margin: 20px 0;
+        }
+
+        .tier-header {
+            color: #c0a0ff;
+            font-size: 1em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 5px;
+        }
+
+        .tier-header.minor {
+            background: rgba(60, 80, 60, 0.3);
+            border-left: 3px solid #6aaa6a;
+            color: #a0ffa0;
+        }
+
+        .tier-header.major {
+            background: rgba(80, 60, 40, 0.3);
+            border-left: 3px solid #aa8a4a;
+            color: #ffcc88;
+        }
+
+        .tier-header.rite {
+            background: rgba(80, 40, 80, 0.3);
+            border-left: 3px solid #aa4aaa;
+            color: #ffa0ff;
+        }
+
+        .challenge-card {
+            background: rgba(60, 40, 40, 0.4);
+            border: 1px solid #8a5a5a;
+            border-radius: 5px;
+            padding: 12px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .challenge-card:hover {
+            background: rgba(70, 50, 50, 0.6);
+            border-color: #aa7a7a;
+            transform: translateX(5px);
+        }
+
+        .challenge-card.completed {
+            background: rgba(40, 60, 40, 0.4);
+            border-color: #6a9a6a;
+            opacity: 0.7;
+        }
+
+        .challenge-title {
+            color: #ffcc88;
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .challenge-desc {
+            color: #b0b0d0;
+            font-size: 0.9em;
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+
+        .challenge-growth {
+            color: #8aaa8a;
+            font-size: 0.85em;
+            font-style: italic;
+            border-left: 2px solid #6a8a6a;
+            padding-left: 10px;
+        }
+
+        .rite-card {
+            background: rgba(60, 30, 60, 0.5);
+            border: 2px solid #aa4aaa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .rite-card:hover {
+            background: rgba(70, 40, 70, 0.7);
+            border-color: #ca6aca;
+            transform: scale(1.02);
+        }
+
+        .rite-card.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(50%);
+        }
+
+        .rite-card.completed {
+            background: rgba(40, 20, 40, 0.6);
+            border-color: #6a3a6a;
+        }
+
+        .rite-title {
+            color: #ffa0ff;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .rite-status {
+            color: #ffaa00;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+
+        .rite-scar {
+            background: rgba(40, 20, 20, 0.5);
+            border-left: 3px solid #aa4a4a;
+            padding: 10px;
+            margin-top: 10px;
+            color: #ff8888;
+            font-size: 0.9em;
+        }
+
+        .rite-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .rite-modal.active {
+            display: flex;
+        }
+
+        .rite-modal-content {
+            background: rgba(40, 20, 40, 0.95);
+            border: 3px solid #aa4aaa;
+            border-radius: 10px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .rite-testimony-input {
+            width: 100%;
+            min-height: 150px;
+            background: rgba(30, 30, 50, 0.8);
+            border: 2px solid #8a6aaa;
+            border-radius: 5px;
+            padding: 15px;
+            color: #e0e0e0;
+            font-family: 'Courier New', monospace;
+            margin: 20px 0;
+            resize: vertical;
+        }
+
+        .mirror-moment {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000000;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            animation: fadeIn 2s ease;
+        }
+
+        .mirror-moment.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .mirror-text {
+            color: #e0e0e0;
+            font-size: 1.5em;
+            text-align: center;
+            max-width: 600px;
+            padding: 40px;
+            line-height: 1.8;
+            animation: textFadeIn 3s ease;
+        }
+
+        @keyframes textFadeIn {
+            0% { opacity: 0; }
+            50% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        .challenge-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #8a6a6a;
+            border-radius: 3px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background: rgba(40, 40, 60, 0.5);
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .challenge-checkbox.completed {
+            background: rgba(60, 80, 60, 0.6);
+            border-color: #6aaa6a;
+            color: #a0ffa0;
+        }
+
+        .challenge-checkbox:hover {
+            border-color: #aa8a8a;
+        }
+
+        .toggle-challenges-btn {
+            background: rgba(80, 60, 40, 0.6);
+            color: #ffa500;
+            border: 1px solid #8a6a4a;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            width: 100%;
+            margin-top: 15px;
+            transition: all 0.3s;
+        }
+
+        .toggle-challenges-btn:hover {
+            background: rgba(90, 70, 50, 0.8);
+        }
+
+        .challenges-list {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .challenges-list.expanded {
+            max-height: 2000px;
+        }
+
+        .message {
+            text-align: center;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            font-size: 1em;
+            display: none;
+        }
+
+        .message.success {
+            background: rgba(50, 150, 50, 0.3);
+            border: 1px solid #4aaa4a;
+            color: #a0ffa0;
+        }
+
+        .message.warning {
+            background: rgba(150, 100, 50, 0.3);
+            border: 1px solid #aa8a4a;
+            color: #ffcc88;
+        }
+
+        .message.enlightened {
+            background: rgba(100, 50, 150, 0.3);
+            border: 1px solid #8a4aaa;
+            color: #e0a0ff;
+        }
+
+        .reset-btn {
+            background: #8a4a4a;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            transition: all 0.3s;
+            display: block;
+            margin: 20px auto 0;
+        }
+
+        .reset-btn:hover {
+            background: #aa5a5a;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚡ ESOTERIC UNLOCK — V2 ⚡</h1>
+            <div class="tagline">Discipline over impulse. Choice over comfort.</div>
+        </div>
+
+        <div id="message" class="message"></div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-label">Unlocked</div>
+                <div class="stat-value" id="unlocked">0/7</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Integrity</div>
+                <div class="stat-value" id="energy">10</div>
+                <div class="stat-label" id="integrityState" style="font-size: 0.75em; margin-top: 5px; font-style: italic;"></div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Day</div>
+                <div class="stat-value" id="day">1</div>
+            </div>
+        </div>
+
+        <div class="chakras" id="chakras"></div>
+
+        <button class="reset-btn" onclick="resetGame()">Reset Progress</button>
+    </div>
+
+    <div id="practiceModal" class="modal">
+        <div class="modal-content">
+            <div id="guidanceLevelIndicator" style="text-align: center; color: #8a8aaa; font-size: 0.85em; margin-bottom: 15px; font-style: italic;"></div>
+            <div class="veil" id="modalVeil"></div>
+            <div class="practice-text" id="modalPractice"></div>
+            <div class="lesson" id="modalLesson"></div>
+
+            <div class="ai-guide">
+                <div class="ai-guide-header">
+                    <div class="ai-avatar">🧘</div>
+                    <span>AI Practice Guide</span>
+                </div>
+
+                <div class="stage-tabs">
+                    <div class="stage-tab active" onclick="switchStage('show')">
+                        SHOW
+                    </div>
+                    <div class="stage-tab" onclick="switchStage('try')">
+                        TRY
+                    </div>
+                    <div class="stage-tab" id="doTab" onclick="switchStage('do')" style="opacity: 0.5; cursor: not-allowed;">
+                        DO 🔒
+                    </div>
+                </div>
+
+                <div id="showStage" class="stage-content active">
+                    <div class="guide-text" id="showText"></div>
+                    <div class="guide-video">
+                        <div class="guide-animation" id="showAnimation"></div>
+                        <div id="showVisual"></div>
+                    </div>
+                    <div class="guide-steps" id="showSteps"></div>
+                    <div class="nav-buttons">
+                        <button class="nav-btn primary" onclick="switchStage('try')">
+                            Ready to Try →
+                        </button>
+                    </div>
+                </div>
+
+                <div id="tryStage" class="stage-content">
+                    <div class="guide-text" id="tryText"></div>
+                    <div style="background: rgba(80, 60, 40, 0.4); border: 1px solid #8a7a5a; padding: 15px; border-radius: 5px; margin-bottom: 15px; color: #ffcc88;">
+                        <strong>Commitment Check:</strong> Type at least one word about your attempt. This unlocks DO. Not for data — for commitment. Even one word counts. The act matters.
+                    </div>
+                    <textarea 
+                        class="try-input" 
+                        id="tryInput" 
+                        placeholder="What did you experience? (Type anything to unlock DO stage...)"
+                        oninput="checkTryCommitment()"
+                    ></textarea>
+                    <div class="try-feedback" id="tryFeedback"></div>
+                    <div class="nav-buttons">
+                        <button class="nav-btn" onclick="switchStage('show')">
+                            ← Back to SHOW
+                        </button>
+                        <button class="nav-btn primary" id="tryNextBtn" onclick="validateTry()" disabled style="opacity: 0.5; cursor: not-allowed;">
+                            Next: DO → (locked)
+                        </button>
+                    </div>
+                </div>
+
+                <div id="doStage" class="stage-content">
+                    <div class="guide-text" id="doText"></div>
+                    <div class="guide-steps" id="doSteps"></div>
+                    <div class="nav-buttons">
+                        <button class="nav-btn" onclick="switchStage('try')">
+                            ← Back to TRY
+                        </button>
+                        <button class="nav-btn primary" onclick="completePractice()">
+                            ✓ Practice Complete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="riteModal" class="rite-modal">
+        <div class="rite-modal-content">
+            <h2 id="riteTitle" style="color: #ffa0ff; margin-bottom: 20px;"></h2>
+            <div id="riteDescription" style="color: #b0b0d0; margin-bottom: 15px; line-height: 1.6;"></div>
+            <div id="riteGrowth" style="color: #ff8888; font-style: italic; margin-bottom: 20px; padding: 15px; background: rgba(60, 30, 30, 0.4); border-left: 3px solid #aa4a4a; border-radius: 5px;"></div>
+            
+            <div id="riteCompleted" style="display: none; color: #ffaa00; font-weight: bold; margin-bottom: 15px; text-align: center;"></div>
+            
+            <div style="margin-bottom: 10px; color: #c0a0ff;">
+                <strong>Document your transformation:</strong>
+            </div>
+            <textarea id="riteTestimony" class="rite-testimony-input" placeholder="What changed? What can you never unknow? This testimony is permanent..."></textarea>
+            
+            <input type="hidden" id="riteAbilityId">
+            
+            <div style="display: flex; gap: 10px;">
+                <button class="nav-btn" onclick="document.getElementById('riteModal').classList.remove('active')">
+                    Close
+                </button>
+                <button id="completeRiteBtn" class="nav-btn primary" onclick="completeRite()">
+                    ⚡ Complete Rite (Irreversible)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="mirrorMoment" class="mirror-moment">
+        <div class="mirror-text" id="mirrorText"></div>
+    </div>
+
+    <script>
+        const ABILITIES = [
+            {
+                id: 1,
+                name: "Root – Grounding",
+                practice: "Stand barefoot. Visualize roots into Earth. 5 slow breaths.",
+                veil: "Instability",
+                lesson: "Stability precedes growth.",
+                challenges: {
+                    minor: [
+                        {
+                            title: "Walk Barefoot Outside",
+                            description: "Walk barefoot on grass, dirt, or sand for 20 minutes. Feel texture. Be present with each step.",
+                            growth: "Reconnects you to Earth, grounds scattered energy"
+                        },
+                        {
+                            title: "Cold Exposure",
+                            description: "End your shower with 2 minutes of cold water. Don't flinch. Breathe slowly. Control your reaction.",
+                            growth: "Trains nervous system regulation under stress"
+                        }
+                    ],
+                    major: [
+                        {
+                            title: "Sleep on the Floor (7 Days)",
+                            description: "Sleep on the floor with only a mat/blanket for one full week. Feel Earth's support directly every night.",
+                            growth: "Breaks attachment to comfort, builds physical resilience"
+                        },
+                        {
+                            title: "24-Hour Fast",
+                            description: "Go 24 hours with only water. No food, coffee, or distractions. Sit with hunger without filling it.",
+                            growth: "Teaches you that discomfort won't destroy you"
+                        },
+                        {
+                            title: "Financial Audit & Truth",
+                            description: "List every dollar you owe and own. Face your financial reality without judgment. Share it with someone you trust.",
+                            growth: "Root chakra governs survival - money clarity builds stability"
+                        }
+                    ],
+                    rite: {
+                        title: "The Foundation Rite",
+                        description: "Spend 48 hours in nature with minimal supplies (water, basic shelter). No phone, no entertainment. Just you and Earth. Build a fire. Sleep under stars. Return changed.",
+                        growth: "You will learn whether you can trust yourself to survive. This cannot be undone.",
+                        testimony: ""
+                    }
+                },
+                guide: {
+                    show: {
+                        text: "Most people avoid this. Too simple. Too quiet. Notice if you're one of them.",
+                        animation: "🌳",
+                        visual: "Roots extending from your feet",
+                        steps: [
+                            "Remove your shoes and stand barefoot on the ground (or floor)",
+                            "Close your eyes and take a deep breath",
+                            "Visualize thick roots growing from the soles of your feet",
+                            "See these roots extending deep into the Earth",
+                            "Feel the stability and support flowing up through your roots"
+                        ]
+                    },
+                    "try": "Barefoot. Eyes closed. Five breaths. See if you can stay with it without checking your phone.",
+                    "do": "You'll reach for distractions. That's the point. Come back anyway."
+                }
+            },
+            {
+                id: 2,
+                name: "Sacral – Creativity",
+                practice: "Hip circles 10x each direction with deep breathing.",
+                veil: "Repression",
+                lesson: "Flow requires permission.",
+                challenges: {
+                    minor: [
+                        {
+                            title: "Create Without Editing",
+                            description: "Write, draw, or make music for 30 minutes. Zero editing. Zero judgment. Let it be messy and raw.",
+                            growth: "Silences the inner critic, unlocks creative flow"
+                        },
+                        {
+                            title: "Dance Alone",
+                            description: "Put on music and dance alone for 15 minutes. Move however your body wants. Lock the door. Be ridiculous.",
+                            growth: "Releases shame and self-consciousness stored in the body"
+                        }
+                    ],
+                    major: [
+                        {
+                            title: "Share Something Unfinished",
+                            description: "Show someone your rough draft, half-done project, or imperfect creation. Don't apologize for it. Let it exist as-is.",
+                            growth: "Breaks perfectionism, embraces vulnerability"
+                        },
+                        {
+                            title: "Say No to Obligation (Week)",
+                            description: "For one week, decline everything you don't want to do but feel you 'should.' Notice the guilt. Sit with it. Don't justify.",
+                            growth: "Reclaims creative energy wasted on obligations"
+                        },
+                        {
+                            title: "Explore Taboo Territory",
+                            description: "Journal about something you've labeled 'forbidden' - a desire, fantasy, or thought you've suppressed. Acknowledge it exists. No action required.",
+                            growth: "Sacral energy is repressed by shame - naming it frees it"
+                        }
+                    ],
+                    rite: {
+                        title: "The Uninhibited Rite",
+                        description: "Attend an ecstatic dance, authentic relating workshop, or similar vulnerability space. Show up completely. No mask. No performance. Let yourself be seen in raw creative expression. Document what you discover about the self you've been hiding.",
+                        growth: "You will meet the version of yourself you've been too afraid to be. No going back to complete repression.",
+                        testimony: ""
+                    }
+                },
+                guide: {
+                    show: {
+                        text: "Your body knows what you've been ignoring. This practice asks directly.",
+                        animation: "〰️",
+                        visual: "Energy flowing in your lower belly",
+                        steps: [
+                            "Stand with feet hip-width apart, hands on hips",
+                            "Begin rotating your hips in a slow, wide circle clockwise",
+                            "Breathe deeply and smoothly - inhale for half the circle, exhale for the other half",
+                            "Complete 10 full rotations",
+                            "Reverse direction and complete 10 counterclockwise rotations",
+                            "Notice any emotions or sensations that arise - don't judge, just observe"
+                        ]
+                    },
+                    "try": "Ten circles each way. Slowly. Emotions might surface. Most people stop when that happens.",
+                    "do": "If nothing comes up, you're doing it wrong. Or you're very good at staying numb."
+                }
+            },
+            {
+                id: 3,
+                name: "Solar Plexus – Willpower",
+                practice: "30 rounds Breath of Fire.",
+                veil: "Indecision",
+                lesson: "Power comes from commitment.",
+                challenges: {
+                    minor: [
+                        {
+                            title: "Keep One Difficult Promise",
+                            description: "Make a promise to yourself (wake at 5am, no phone for a day, etc.) and keep it. No excuses. No negotiating.",
+                            growth: "Proves to yourself that your word means something"
+                        },
+                        {
+                            title: "Physical Challenge",
+                            description: "Do something physically hard: 100 pushups (break into sets), hold plank to failure, run until you want to quit then run 5 more minutes.",
+                            growth: "Willpower is a muscle - this works it directly"
+                        }
+                    ],
+                    major: [
+                        {
+                            title: "Speak Your Truth",
+                            description: "Tell someone something true that you've been avoiding saying. Could be 'I'm hurt' or 'I disagree' or 'I need space.' Say it calmly and directly.",
+                            growth: "Willpower means acting despite fear of consequence"
+                        },
+                        {
+                            title: "Make THE Decision",
+                            description: "That job, relationship, move, project you've been 'thinking about' for months - decide today. Yes or no. Stop living in maybe. Act within 48 hours.",
+                            growth: "Indecision drains power - any decision restores it"
+                        },
+                        {
+                            title: "Confront the Violation",
+                            description: "Address a boundary violation you've been tolerating. Calm, direct, non-aggressive: 'When you X, I feel Y. I need Z.' Hold the line.",
+                            growth: "Solar plexus governs personal power - this reclaims it"
+                        }
+                    ],
+                    rite: {
+                        title: "The Sovereignty Rite",
+                        description: "Publicly take a stand on something you believe that will cost you something - social approval, opportunity, comfort. Post it. Speak it. Own it fully. Then watch who stays and who leaves. Document the fallout and what you learn about your own spine.",
+                        growth: "You will learn whether you value truth or approval more. You cannot unknow the answer.",
+                        testimony: ""
+                    }
+                },
+                guide: {
+                    show: {
+                        text: "Thirty breaths seems arbitrary until you try quitting at twenty. Then you understand.",
+                        animation: "🔥",
+                        visual: "Fire burning in your belly",
+                        steps: [
+                            "Sit with a straight spine (cross-legged or in a chair)",
+                            "Place one hand on your belly",
+                            "Breathe IN quickly through your nose, letting belly expand",
+                            "Breathe OUT forcefully through your nose, pulling belly in sharply",
+                            "The exhale is the focus - quick, powerful, from the diaphragm",
+                            "Start slowly: in-out, in-out, building to 2-3 breaths per second",
+                            "Work up to 30 rounds (about 15-20 seconds)"
+                        ]
+                    },
+                    "try": "Start with ten rounds. You'll want to do more. That's ego. Stick to the plan.",
+                    "do": "Confidence without discipline becomes arrogance. You'll learn the difference."
+                }
+            },
+            {
+                id: 4,
+                name: "Heart – Compassion",
+                practice: "Hand on heart. Inhale love, exhale forgiveness (10 breaths).",
+                veil: "Resentment",
+                lesson: "Armor blocks healing.",
+                challenges: {
+                    minor: [
+                        {
+                            title: "Express Appreciation",
+                            description: "Tell 3 people specifically why you appreciate them. In person or voice message. Be vulnerable. Mean it.",
+                            growth: "Heart chakra opens through giving, not just receiving"
+                        },
+                        {
+                            title: "Self-Compassion Practice",
+                            description: "Write a letter to yourself from the perspective of someone who loves you unconditionally. Read what they'd say about your flaws.",
+                            growth: "Can't give compassion to others if you withhold it from yourself"
+                        }
+                    ],
+                    major: [
+                        {
+                            title: "Forgive the Unforgivable",
+                            description: "Think of the person who hurt you most. Say out loud: 'I forgive [name] for [what they did].' You don't have to contact them. Repeat daily for 7 days.",
+                            growth: "Resentment is drinking poison hoping they die - this is the antidote"
+                        },
+                        {
+                            title: "Apologize Without Defense",
+                            description: "Apologize to someone you've wronged. Don't explain why you did it. Just: 'I'm sorry for [action]. That was wrong. What can I do to make it right?'",
+                            growth: "Drops defensiveness, opens the heart through humility"
+                        },
+                        {
+                            title: "Grief Ceremony",
+                            description: "Set aside 2 hours. Put on sad music. Let yourself cry about everything you've been holding. Write letters to what you've lost. Burn them.",
+                            growth: "Armor is built from unfelt grief - this melts it"
+                        }
+                    ],
+                    rite: {
+                        title: "The Reconciliation Rite",
+                        description: "Reach out to someone you've hurt or who hurt you - the one you said you'd never speak to again. Attempt genuine reconciliation or closure. Face-to-face if possible. Bring nothing but an open heart. Document what happens when you try to mend what was shattered.",
+                        growth: "You will learn whether your heart can stay open in the presence of past pain. Love or fear - one will win permanently.",
+                        testimony: ""
+                    }
+                },
+                guide: {
+                    show: {
+                        text: "Armor feels like protection. It's actually a cage. This practice shows you the bars.",
+                        animation: "💚",
+                        visual: "Green healing light in your chest",
+                        steps: [
+                            "Sit comfortably and place your hand over your heart",
+                            "Close your eyes and feel your heartbeat",
+                            "Breathe slowly and deeply",
+                            "On each INHALE: think or whisper 'love' - imagine breathing in love and compassion",
+                            "On each EXHALE: think or whisper 'forgiveness' - release any resentment or hurt",
+                            "Direct this love and forgiveness toward yourself first, then others",
+                            "Complete 10 full breath cycles"
+                        ]
+                    },
+                    "try": "Ten breaths. Hand on heart. Watch yourself resist feeling anything real.",
+                    "do": "Forgiveness isn't for them. It's so you can stop carrying poison."
+                }
+            },
+            {
+                id: 5,
+                name: "Throat – Expression",
+                practice: "Hum 'OM' or 'AH' for 60 seconds.",
+                veil: "Suppression",
+                lesson: "Truth wants a voice.",
+                challenges: {
+                    minor: [
+                        {
+                            title: "Record Yourself Speaking",
+                            description: "Record a 5-minute voice memo about something you believe. Listen to it. Notice your discomfort with your own voice. Don't delete it.",
+                            growth: "Most people suppress their voice because they judge it - this builds acceptance"
+                        },
+                        {
+                            title: "Disagree Out Loud",
+                            description: "Next time you disagree with someone, say so (respectfully). Stop nodding along to keep peace. Just once, say 'I see it differently.'",
+                            growth: "Authentic voice requires saying unpopular truths"
+                        }
+                    ],
+                    major: [
+                        {
+                            title: "Ask for What You Want",
+                            description: "Ask for something you want but haven't dared to request. A raise, help, time alone, affection. Be direct. No softening. No apology.",
+                            growth: "Throat chakra is blocked by unspoken needs"
+                        },
+                        {
+                            title: "Sing in Public",
+                            description: "Sing in your car with windows down, hum loudly in the elevator, or do karaoke. Be heard making sound in a public space.",
+                            growth: "Breaks shame around using your voice fully"
+                        },
+                        {
+                            title: "Tell the Secret",
+                            description: "Share something true you've been hiding with a safe person or therapist. Not to shock - to stop carrying it alone. Speak what's been locked in your throat.",
+                            growth: "Secrets create energetic blockages - speaking them releases power"
+                        }
+                    ],
+                    rite: {
+                        title: "The Testimony Rite",
+                        description: "Write and share publicly (blog, social media, open mic) your honest story about something you've never spoken about - trauma, failure, hidden truth. No anonymous posting. Your name. Your voice. Your truth. Watch what happens when you stop hiding.",
+                        growth: "You will learn that your voice doesn't destroy you. You cannot return to silence the same way.",
+                        testimony: ""
+                    }
+                },
+                guide: {
+                    show: {
+                        text: "Your voice has power. That's exactly why you've been keeping it quiet.",
+                        animation: "🔊",
+                        visual: "Blue vibrating energy in your throat",
+                        steps: [
+                            "Sit with a straight spine",
+                            "Take a deep breath in through your nose",
+                            "On the exhale, hum 'OMMMMM' or 'AHHHHHH' continuously",
+                            "Feel the vibration in your throat and chest",
+                            "Use a pitch that feels comfortable and resonant",
+                            "Inhale again and repeat",
+                            "Continue for 60 seconds (about 6-8 rounds)"
+                        ]
+                    },
+                    "try": "One minute. No one's listening. That's not the point.",
+                    "do": "Practice before important conversations or when you're struggling to speak your truth. The vibration literally clears the channel."
+                }
+            },
+            {
+                id: 6,
+                name: "Third Eye – Intuition",
+                practice: "Candle gazing for 2 minutes.",
+                veil: "Distraction",
+                lesson: "Clarity follows stillness.",
+                challenges: {
+                    minor: [
+                        {
+                            title: "Follow a Hunch",
+                            description: "Act on your next intuitive hit without analyzing it. Random urge to call someone? Do it. Feel pulled to take a different route? Take it. Trust once.",
+                            growth: "Intuition strengthens through use, atrophies through doubt"
+                        },
+                        {
+                            title: "Dream Journaling",
+                            description: "Keep a notebook by your bed. For 7 days, write down your dreams immediately upon waking. Look for patterns. Don't interpret - just record.",
+                            growth: "Dreams are the third eye's language - recording them builds fluency"
+                        }
+                    ],
+                    major: [
+                        {
+                            title: "Digital Sabbath (48hrs)",
+                            description: "48 hours without screens. No phone, computer, TV. Just you, books, nature, people. Notice what emerges in the silence. Journal the experience.",
+                            growth: "Intuition can't speak over constant digital noise"
+                        },
+                        {
+                            title: "Sit in Darkness",
+                            description: "Sit in a completely dark room for 1 hour. No phone light. Let your eyes adjust. Watch what your mind creates. Don't run from what arises.",
+                            growth: "Third eye sees beyond physical - darkness trains this"
+                        },
+                        {
+                            title: "Question Meditation",
+                            description: "Write a question you need answered. Meditate on it for 30 minutes daily for 7 days. Don't try to solve it - just hold it. Record what arises.",
+                            growth: "Third eye provides insight through seeing, not thinking"
+                        }
+                    ],
+                    rite: {
+                        title: "The Divination Rite",
+                        description: "Make a major life decision based purely on intuition, ignoring all logical analysis. Journal the question. Meditate. Act on the first clear hit you receive within 72 hours. No second-guessing. Document the outcome 6 months later.",
+                        growth: "You will learn whether you can trust what you see beyond reason. Doubt or knowing - one becomes permanent.",
+                        testimony: ""
+                    }
+                },
+                guide: {
+                    show: {
+                        text: "The flame doesn't move. You do. That's what this shows you.",
+                        animation: "🕯️",
+                        visual: "Indigo light at your forehead",
+                        steps: [
+                            "Light a candle and place it at eye level, about 2 feet away",
+                            "Sit comfortably with straight spine",
+                            "Gaze softly at the flame - don't strain",
+                            "Try not to blink (tears are normal - this cleanses the eyes)",
+                            "When your mind wanders, gently return focus to the flame",
+                            "Stay present with the flame for 2 minutes",
+                            "Close eyes and observe the afterimage - this is key"
+                        ]
+                    },
+                    "try": "Two minutes without blinking. Most people can't make it past thirty seconds.",
+                    "do": "Stillness isn't peaceful at first. It shows you everything you've been avoiding."
+                }
+            },
+            {
+                id: 7,
+                name: "Crown – Surrender",
+                practice: "Visualize violet light entering crown. Release control.",
+                veil: "Ego",
+                lesson: "Letting go is strength.",
+                challenges: {
+                    minor: [
+                        {
+                            title: "Admit 'I Don't Know'",
+                            description: "In 5 conversations today, say 'I don't know' when you usually would fake knowing. Feel the humility. Watch reactions.",
+                            growth: "Crown opens through intellectual surrender - admitting limits of knowledge"
+                        },
+                        {
+                            title: "Let Someone Else Lead",
+                            description: "For one full day, let others make all decisions. Where to eat, what to watch, how to spend time. Surrender control completely. No input.",
+                            growth: "Ego fights to maintain control - this practice dissolves that need"
+                        }
+                    ],
+                    major: [
+                        {
+                            title: "Serve Anonymously",
+                            description: "Do 5 acts of significant kindness where no one will know it was you. No credit. No recognition. No social media. Keep it secret forever.",
+                            growth: "Ego wants recognition - service without it breaks that attachment"
+                        },
+                        {
+                            title: "Release an Identity",
+                            description: "Stop saying 'I am [label]' for two weeks. Not 'I'm an artist/athlete/introvert.' See who you are without the story. Journal discoveries.",
+                            growth: "Crown transcends ego - labels are ego's scaffolding"
+                        },
+                        {
+                            title: "Physical Surrender",
+                            description: "Physically bow or kneel for 10 minutes daily for 7 days (to God, universe, or what's greater than you). Let your body teach your mind humility.",
+                            growth: "Crown chakra connects to something beyond self - humbling the body opens it"
+                        }
+                    ],
+                    rite: {
+                        title: "The Ego Death Rite",
+                        description: "Undergo a supervised experience designed to dissolve ego boundaries - meditation retreat (10+ days), breathwork ceremony, plant medicine with integration, or similar. Face the self's total dissolution. Return and document who remains when 'you' are gone.",
+                        growth: "You will learn what you are beneath all identities. You cannot rebuild the old ego the same way after seeing its illusion.",
+                        testimony: ""
+                    }
+                },
+                guide: {
+                    show: {
+                        text: "Ego thinks it's you. This practice asks: who's watching the ego?",
+                        animation: "👑",
+                        visual: "Violet light pouring into the top of your head",
+                        steps: [
+                            "Sit or lie down in a quiet space",
+                            "Close your eyes and bring attention to the crown of your head",
+                            "Visualize a beam of violet light above you",
+                            "See/feel this light pouring down through the top of your head",
+                            "As it flows in, mentally release: 'I surrender control. I trust.'",
+                            "Let the light fill your entire body",
+                            "Sit in this receptive state for 5 minutes"
+                        ]
+                    },
+                    "try": "Two minutes. Not five, not ten. You're not ready for more yet.",
+                    "do": "Control is the illusion you're holding onto. This practice asks: what's underneath?"
+                }
+            }
+        ];
+
+        const REQUIRED_CU = 5;
+
+        const MIRROR_MOMENTS = {
+            1: "This doesn't make you better. It makes you responsible.",
+            2: "Flow isn't freedom. It's permission to let go of control.",
+            3: "Power without discipline is just noise.",
+            4: "Opening your heart doesn't heal others. It stops poisoning yourself.",
+            5: "Your truth won't set you free. Living it will.",
+            6: "Clarity shows you what you've been avoiding.",
+            7: "Surrender isn't weakness. It's the end of pretending."
+        };
+
+        class GameState {
+            constructor() {
+                this.loadState();
+            }
+
+            loadState() {
+                const saved = localStorage.getItem('esotericUnlockV2');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    this.progress = data.progress || {};
+                    this.streaks = data.streaks || {};
+                    this.lastPractice = data.lastPractice || {};
+                    this.energy = data.energy || 10;
+                    this.currentDay = data.currentDay || 1;
+                    this.completedChallenges = data.completedChallenges || {};
+                    this.riteTestimonies = data.riteTestimonies || {};
+                    this.focusChakra = data.focusChakra || null;
+                    this.focusStartDay = data.focusStartDay || null;
+                    
+                    // Migrate old challenge format to new
+                    ABILITIES.forEach(ab => {
+                        if (this.completedChallenges[ab.id] && Array.isArray(this.completedChallenges[ab.id])) {
+                            this.completedChallenges[ab.id] = {minor: [], major: []};
+                        }
+                        if (!this.completedChallenges[ab.id]) {
+                            this.completedChallenges[ab.id] = {minor: [], major: []};
+                        }
+                        if (!this.riteTestimonies[ab.id]) {
+                            this.riteTestimonies[ab.id] = null;
+                        }
+                    });
+                } else {
+                    this.reset();
+                }
+            }
+
+            saveState() {
+                localStorage.setItem('esotericUnlockV2', JSON.stringify({
+                    progress: this.progress,
+                    streaks: this.streaks,
+                    lastPractice: this.lastPractice,
+                    energy: this.energy,
+                    currentDay: this.currentDay,
+                    completedChallenges: this.completedChallenges,
+                    riteTestimonies: this.riteTestimonies,
+                    focusChakra: this.focusChakra,
+                    focusStartDay: this.focusStartDay
+                }));
+            }
+
+            reset() {
+                this.progress = {};
+                this.streaks = {};
+                this.lastPractice = {};
+                this.completedChallenges = {};
+                this.riteTestimonies = {};
+                this.focusChakra = null;
+                this.focusStartDay = null;
+                ABILITIES.forEach(ab => {
+                    this.progress[ab.id] = 0;
+                    this.streaks[ab.id] = 0;
+                    this.lastPractice[ab.id] = null;
+                    this.completedChallenges[ab.id] = {minor: [], major: []};
+                    this.riteTestimonies[ab.id] = null;
+                });
+                this.energy = 10;
+                this.currentDay = 1;
+                this.saveState();
+            }
+
+            declareFocus(abilityId) {
+                this.focusChakra = abilityId;
+                this.focusStartDay = this.currentDay;
+                this.saveState();
+            }
+
+            clearFocus() {
+                this.focusChakra = null;
+                this.focusStartDay = null;
+                this.saveState();
+            }
+
+            getFocusDaysRemaining() {
+                if (!this.focusChakra || !this.focusStartDay) return 0;
+                const elapsed = this.currentDay - this.focusStartDay;
+                return Math.max(0, 3 - elapsed);
+            }
+
+            isFocusActive() {
+                return this.focusChakra !== null && this.getFocusDaysRemaining() > 0;
+            }
+
+            isPracticingOutsideFocus(abilityId) {
+                return this.isFocusActive() && this.focusChakra !== abilityId;
+            }
+
+            toggleChallenge(abilityId, tier, challengeIndex) {
+                if (!this.completedChallenges[abilityId]) {
+                    this.completedChallenges[abilityId] = {minor: [], major: []};
+                }
+                if (!this.completedChallenges[abilityId][tier]) {
+                    this.completedChallenges[abilityId][tier] = [];
+                }
+                
+                const index = this.completedChallenges[abilityId][tier].indexOf(challengeIndex);
+                if (index > -1) {
+                    this.completedChallenges[abilityId][tier].splice(index, 1);
+                } else {
+                    this.completedChallenges[abilityId][tier].push(challengeIndex);
+                }
+                
+                this.saveState();
+            }
+
+            isChallengeCompleted(abilityId, tier, challengeIndex) {
+                return this.completedChallenges[abilityId]?.[tier]?.includes(challengeIndex) || false;
+            }
+
+            completeRite(abilityId, testimony) {
+                this.riteTestimonies[abilityId] = {
+                    date: new Date().toISOString(),
+                    testimony: testimony
+                };
+                this.saveState();
+            }
+
+            isRiteCompleted(abilityId) {
+                return this.riteTestimonies[abilityId] !== null && this.riteTestimonies[abilityId] !== undefined;
+            }
+
+            getRiteTestimony(abilityId) {
+                return this.riteTestimonies[abilityId]?.testimony || '';
+            }
+
+            canPractice(abilityId) {
+                return this.lastPractice[abilityId] !== this.currentDay;
+            }
+
+            applyDecay(abilityId) {
+                if (this.streaks[abilityId] > 0) {
+                    this.streaks[abilityId] = 0;
+                    this.energy = Math.max(0, this.energy - 1);
+                }
+            }
+
+            getGuidanceLevel(abilityId) {
+                const completions = this.progress[abilityId];
+                if (completions < 2) return 'full';     // 0-1: Full guidance
+                if (completions < 4) return 'steps';    // 2-3: Steps only
+                return 'minimal';                        // 4+: Veil + practice only
+            }
+
+            practice(abilityId) {
+                // Check if practicing outside focus
+                const outsideFocus = this.isPracticingOutsideFocus(abilityId);
+                
+                // Apply decay to other chakras
+                ABILITIES.forEach(ab => {
+                    if (ab.id !== abilityId) {
+                        this.applyDecay(ab.id);
+                    }
+                });
+
+                // Update current chakra
+                this.lastPractice[abilityId] = this.currentDay;
+                
+                if (outsideFocus) {
+                    // Practicing outside focus: no progress, energy leak
+                    this.energy = Math.max(0, this.energy - 2);
+                    // Streak still increments but no progress
+                    this.streaks[abilityId] += 1;
+                } else {
+                    // Normal practice or within focus
+                    this.streaks[abilityId] += 1;
+                    
+                    // Grant progress if streak >= 1
+                    if (this.streaks[abilityId] >= 1) {
+                        this.progress[abilityId] = Math.min(
+                            REQUIRED_CU,
+                            this.progress[abilityId] + 1
+                        );
+                    }
+                    
+                    // Bonus integrity for staying in focus
+                    if (this.isFocusActive() && this.focusChakra === abilityId) {
+                        this.energy = Math.min(10, this.energy + 2);
+                    } else {
+                        this.energy = Math.min(10, this.energy + 1);
+                    }
+                }
+
+                this.saveState();
+                return outsideFocus;
+            }
+
+            isUnlocked(abilityId) {
+                return this.progress[abilityId] >= REQUIRED_CU;
+            }
+
+            getUnlockedCount() {
+                return ABILITIES.filter(ab => this.isUnlocked(ab.id)).length;
+            }
+
+            isFullyEnlightened() {
+                return this.getUnlockedCount() === 7;
+            }
+        }
+
+        let gameState = new GameState();
+        let currentPracticeId = null;
+        let currentStage = 'show';
+        let tryCommitted = false;
+
+        function updateIntegrityVisuals() {
+            const energy = gameState.energy;
+            const body = document.body;
+            const container = document.querySelector('.container');
+            const integrityState = document.getElementById('integrityState');
+            
+            // Remove existing classes
+            body.classList.remove('low-integrity', 'high-integrity');
+            container.classList.remove('low-integrity', 'high-integrity');
+            
+            // Apply based on energy level and set state text
+            if (energy <= 3) {
+                body.classList.add('low-integrity');
+                container.classList.add('low-integrity');
+                integrityState.textContent = 'scattered';
+                integrityState.style.color = '#aa7a7a';
+            } else if (energy >= 8) {
+                body.classList.add('high-integrity');
+                container.classList.add('high-integrity');
+                integrityState.textContent = 'aligned';
+                integrityState.style.color = '#7aaa7a';
+            } else if (energy >= 5) {
+                integrityState.textContent = 'steady';
+                integrityState.style.color = '#aaaa7a';
+            } else {
+                integrityState.textContent = 'wavering';
+                integrityState.style.color = '#aa9a7a';
+            }
+            
+            // Subtle animation quality changes - no announcements, just feel it
+            const animations = document.querySelectorAll('.guide-animation, .practice-btn, .nav-btn');
+            animations.forEach(el => {
+                if (energy <= 3) {
+                    el.style.animationDuration = '2.5s';
+                    el.style.opacity = '0.8';
+                } else if (energy >= 8) {
+                    el.style.animationDuration = '1.5s';
+                    el.style.opacity = '1';
+                } else {
+                    el.style.animationDuration = '2s';
+                    el.style.opacity = '0.9';
+                }
+            });
+        }
+
+        function checkTryCommitment() {
+            const input = document.getElementById('tryInput').value.trim();
+            const doTab = document.getElementById('doTab');
+            const tryNextBtn = document.getElementById('tryNextBtn');
+            
+            if (input.length > 0) {
+                // Unlock DO
+                tryCommitted = true;
+                doTab.style.opacity = '1';
+                doTab.style.cursor = 'pointer';
+                doTab.textContent = 'DO ✓';
+                
+                tryNextBtn.disabled = false;
+                tryNextBtn.style.opacity = '1';
+                tryNextBtn.style.cursor = 'pointer';
+                tryNextBtn.textContent = 'Next: DO →';
+            } else {
+                // Lock DO
+                tryCommitted = false;
+                doTab.style.opacity = '0.5';
+                doTab.style.cursor = 'not-allowed';
+                doTab.textContent = 'DO 🔒';
+                
+                tryNextBtn.disabled = true;
+                tryNextBtn.style.opacity = '0.5';
+                tryNextBtn.style.cursor = 'not-allowed';
+                tryNextBtn.textContent = 'Next: DO → (locked)';
+            }
+        }
+
+        function switchStage(stage) {
+            // Prevent switching to DO if not committed
+            if (stage === 'do' && !tryCommitted) {
+                showMessage('Complete TRY first. Type at least one word about your attempt.', 'warning');
+                return;
+            }
+
+            // Update tabs
+            document.querySelectorAll('.stage-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event?.target?.classList.add('active') || document.querySelector(`.stage-tab:nth-child(${stage === 'show' ? 1 : stage === 'try' ? 2 : 3})`).classList.add('active');
+
+            // Update content
+            document.querySelectorAll('.stage-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${stage}Stage`).classList.add('active');
+
+            currentStage = stage;
+        }
+
+        function validateTry() {
+            const feedback = document.getElementById('tryFeedback');
+            const input = document.getElementById('tryInput').value.trim();
+            
+            feedback.textContent = '✓ Commitment registered. Your word matters. Proceeding to DO.';
+            feedback.classList.add('active');
+            
+            setTimeout(() => {
+                switchStage('do');
+                feedback.classList.remove('active');
+            }, 1500);
+        }
+
+        function toggleChallenges(abilityId) {
+            const list = document.getElementById(`challenges-${abilityId}`);
+            list.classList.toggle('expanded');
+        }
+
+        function toggleChallenge(abilityId, tier, challengeIndex) {
+            gameState.toggleChallenge(abilityId, tier, challengeIndex);
+            render();
+        }
+
+        function openRiteModal(abilityId) {
+            const ability = ABILITIES.find(ab => ab.id === abilityId);
+            const rite = ability.challenges.rite;
+            
+            document.getElementById('riteTitle').textContent = rite.title;
+            document.getElementById('riteDescription').textContent = rite.description;
+            document.getElementById('riteGrowth').textContent = rite.growth;
+            document.getElementById('riteAbilityId').value = abilityId;
+            
+            const testimony = gameState.getRiteTestimony(abilityId);
+            document.getElementById('riteTestimony').value = testimony;
+            
+            if (gameState.isRiteCompleted(abilityId)) {
+                const date = new Date(gameState.riteTestimonies[abilityId].date);
+                document.getElementById('riteCompleted').textContent = `Completed: ${date.toLocaleDateString()}`;
+                document.getElementById('riteCompleted').style.display = 'block';
+                document.getElementById('riteTestimony').readOnly = true;
+                document.getElementById('completeRiteBtn').style.display = 'none';
+            } else {
+                document.getElementById('riteCompleted').style.display = 'none';
+                document.getElementById('riteTestimony').readOnly = false;
+                document.getElementById('completeRiteBtn').style.display = 'block';
+            }
+            
+            document.getElementById('riteModal').classList.add('active');
+        }
+
+        function completeRite() {
+            const abilityId = parseInt(document.getElementById('riteAbilityId').value);
+            const testimony = document.getElementById('riteTestimony').value.trim();
+            
+            if (!testimony) {
+                showMessage('A rite requires testimony. Document what changed.', 'warning');
+                return;
+            }
+            
+            if (confirm('This is irreversible. A rite marks permanent transformation. Your testimony will be logged as a scar, not a checkbox. Continue?')) {
+                gameState.completeRite(abilityId, testimony);
+                document.getElementById('riteModal').classList.remove('active');
+                showMessage('Rite completed. You are marked.', 'enlightened');
+                render();
+            }
+        }
+
+        function populateGuide(ability) {
+            const guide = ability.guide;
+            const guidanceLevel = gameState.getGuidanceLevel(ability.id);
+
+            // SHOW stage - progressive reduction
+            if (guidanceLevel === 'full') {
+                // Full guidance: explanation + animation + visual + steps
+                document.getElementById('showText').textContent = guide.show.text;
+                document.getElementById('showAnimation').textContent = guide.show.animation;
+                document.getElementById('showVisual').textContent = guide.show.visual;
+                
+                const showSteps = document.getElementById('showSteps');
+                showSteps.innerHTML = guide.show.steps.map(step => 
+                    `<div class="guide-step">${step}</div>`
+                ).join('');
+            } else if (guidanceLevel === 'steps') {
+                // Steps only: animation + steps (no explanation or visual cues)
+                document.getElementById('showText').textContent = '';
+                document.getElementById('showAnimation').textContent = guide.show.animation;
+                document.getElementById('showVisual').textContent = '';
+                
+                const showSteps = document.getElementById('showSteps');
+                showSteps.innerHTML = guide.show.steps.map(step => 
+                    `<div class="guide-step">${step}</div>`
+                ).join('');
+            } else {
+                // Minimal: just the animation, you know what to do
+                document.getElementById('showText').textContent = 'You know this practice.';
+                document.getElementById('showAnimation').textContent = guide.show.animation;
+                document.getElementById('showVisual').textContent = '';
+                document.getElementById('showSteps').innerHTML = '';
+            }
+
+            // TRY stage - progressive reduction
+            if (guidanceLevel === 'full') {
+                document.getElementById('tryText').textContent = guide["try"];
+            } else if (guidanceLevel === 'steps') {
+                document.getElementById('tryText').textContent = 'Practice now. Notice what happens.';
+            } else {
+                document.getElementById('tryText').textContent = 'Do it.';
+            }
+            document.getElementById('tryInput').value = '';
+
+            // DO stage - progressive reduction
+            if (guidanceLevel === 'full') {
+                document.getElementById('doText').textContent = guide["do"];
+            } else if (guidanceLevel === 'steps') {
+                document.getElementById('doText').textContent = 'Complete the practice. Self-direction matters now.';
+            } else {
+                document.getElementById('doText').textContent = 'Practice. No guidance needed.';
+            }
+            
+            const doSteps = document.getElementById('doSteps');
+            if (guidanceLevel === 'full') {
+                doSteps.innerHTML = `
+                    <div class="guide-step">Complete the full practice: ${ability.practice}</div>
+                    <div class="guide-step">Stay present and focused throughout</div>
+                    <div class="guide-step">Notice what you feel - physically, emotionally, energetically</div>
+                    <div class="guide-step">When finished, click below to record your progress</div>
+                `;
+            } else {
+                doSteps.innerHTML = `<div class="guide-step">${ability.practice}</div>`;
+            }
+        }
+
+        function showMessage(text, type = 'success') {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = `message ${type}`;
+            msg.style.display = 'block';
+            setTimeout(() => {
+                msg.style.display = 'none';
+            }, 4000);
+        }
+
+        function startPractice(abilityId) {
+            if (!gameState.canPractice(abilityId)) {
+                showMessage('Already practiced today. Consistency, not excess.', 'warning');
+                return;
+            }
+
+            const ability = ABILITIES.find(ab => ab.id === abilityId);
+            currentPracticeId = abilityId;
+
+            const guidanceLevel = gameState.getGuidanceLevel(abilityId);
+            const progress = gameState.progress[abilityId];
+            
+            // Set guidance level indicator
+            const indicator = document.getElementById('guidanceLevelIndicator');
+            if (guidanceLevel === 'full') {
+                indicator.textContent = `Practice ${progress + 1}/5 — Full guidance`;
+            } else if (guidanceLevel === 'steps') {
+                indicator.textContent = `Practice ${progress + 1}/5 — Steps only. Learn to self-direct.`;
+            } else {
+                indicator.textContent = `Practice ${progress + 1}/5 — You know this. No hand-holding.`;
+            }
+
+            document.getElementById('modalVeil').textContent = `🕸 Veil: ${ability.veil}`;
+            document.getElementById('modalPractice').textContent = `🗝 Practice: ${ability.practice}`;
+            document.getElementById('modalLesson').textContent = `📖 ${ability.lesson}`;
+
+            // Populate and reset guide to SHOW stage
+            populateGuide(ability);
+            
+            // Reset try commitment state
+            tryCommitted = false;
+            document.getElementById('tryInput').value = '';
+            checkTryCommitment(); // Reset button states
+            
+            switchStage('show');
+
+            document.getElementById('practiceModal').classList.add('active');
+        }
+
+        function completePractice() {
+            if (currentPracticeId !== null) {
+                const prevProgress = gameState.progress[currentPracticeId];
+                const outsideFocus = gameState.practice(currentPracticeId);
+                const newProgress = gameState.progress[currentPracticeId];
+                const justUnlocked = prevProgress < REQUIRED_CU && newProgress >= REQUIRED_CU;
+                
+                document.getElementById('practiceModal').classList.remove('active');
+                
+                if (outsideFocus) {
+                    showMessage('Scattered effort. No progress. Integrity lost.', 'warning');
+                } else if (justUnlocked) {
+                    // Show mirror moment instead of celebration
+                    showMirrorMoment(currentPracticeId);
+                } else if (gameState.isFullyEnlightened()) {
+                    showMessage('Silence. No fireworks. No praise. Now the work begins.', 'enlightened');
+                } else if (gameState.isFocusActive() && gameState.focusChakra === currentPracticeId) {
+                    showMessage('Focus honored. Bonus integrity.', 'success');
+                } else {
+                    showMessage('✔ Integrity honored. Progress earned.', 'success');
+                }
+                
+                currentPracticeId = null;
+                render();
+            }
+        }
+
+        function showMirrorMoment(abilityId) {
+            const mirror = document.getElementById('mirrorMoment');
+            const text = document.getElementById('mirrorText');
+            
+            text.textContent = MIRROR_MOMENTS[abilityId];
+            mirror.classList.add('active');
+            
+            // Auto-dismiss after 5 seconds of silence
+            setTimeout(() => {
+                mirror.classList.remove('active');
+            }, 5000);
+        }
+
+        function declareFocus(abilityId) {
+            const ability = ABILITIES.find(ab => ab.id === abilityId);
+            if (confirm(`Declare focus on ${ability.name} for 3 days?\n\nPracticing other chakras will give no progress and drain integrity.\nStaying committed grants bonus integrity.`)) {
+                gameState.declareFocus(abilityId);
+                showMessage('Focus declared. Commitment tested.', 'success');
+                render();
+            }
+        }
+
+        function clearFocus() {
+            if (confirm('Breaking focus early?\n\nThis will cost you integrity.\n\nPower comes from commitment.')) {
+                gameState.energy = Math.max(0, gameState.energy - 3);
+                gameState.clearFocus();
+                showMessage('Focus broken. Integrity lost.', 'warning');
+                render();
+            }
+        }
+
+        function nextDay() {
+            gameState.currentDay += 1;
+            gameState.saveState();
+            showMessage(`Day ${gameState.currentDay} begins. Choose your practice.`, 'success');
+            render();
+        }
+
+        function resetGame() {
+            if (confirm('Reset all progress? This cannot be undone.')) {
+                gameState.reset();
+                showMessage('Progress reset. Begin again.', 'warning');
+                render();
+            }
+        }
+
+        function render() {
+            // Update stats
+            document.getElementById('unlocked').textContent = `${gameState.getUnlockedCount()}/7`;
+            document.getElementById('energy').textContent = gameState.energy;
+            document.getElementById('day').textContent = gameState.currentDay;
+
+            // Update integrity visuals
+            updateIntegrityVisuals();
+
+            // Render chakras
+            const chakrasContainer = document.getElementById('chakras');
+            chakrasContainer.innerHTML = '';
+
+            ABILITIES.forEach(ability => {
+                const isUnlocked = gameState.isUnlocked(ability.id);
+                const canPractice = gameState.canPractice(ability.id);
+                const progress = gameState.progress[ability.id];
+                const streak = gameState.streaks[ability.id];
+
+                const chakraDiv = document.createElement('div');
+                chakraDiv.className = `chakra ${isUnlocked ? 'unlocked' : ''}`;
+
+                chakraDiv.innerHTML = `
+                    <div class="chakra-header">
+                        <div class="chakra-name">${ability.name}</div>
+                        <div class="chakra-progress">
+                            <span class="progress-text">${isUnlocked ? 'UNLOCKED' : `${progress}/${REQUIRED_CU}`}</span>
+                            <span class="streak">🔥 ${streak}</span>
+                        </div>
+                    </div>
+                    <div class="chakra-info">${ability.lesson}</div>
+                    ${gameState.isFocusActive() && gameState.focusChakra === ability.id ? 
+                        `<div style="background: rgba(80, 100, 80, 0.3); border: 1px solid #6aaa6a; padding: 8px; margin: 10px 0; border-radius: 5px; font-size: 0.9em; color: #a0ffa0;">
+                            FOCUS: ${gameState.getFocusDaysRemaining()} days remaining
+                        </div>` : 
+                        gameState.isFocusActive() ? 
+                        `<div style="background: rgba(100, 80, 60, 0.3); border: 1px solid #aa8a6a; padding: 8px; margin: 10px 0; border-radius: 5px; font-size: 0.9em; color: #ccaa88;">
+                            Outside focus — scattered effort
+                        </div>` : ''
+                    }
+                    <button 
+                        class="practice-btn" 
+                        onclick="startPractice(${ability.id})"
+                        ${!canPractice || isUnlocked ? 'disabled' : ''}
+                    >
+                        ${isUnlocked ? 'Mastered' : canPractice ? 'Practice Now' : 'Practiced Today'}
+                    </button>
+                    ${!isUnlocked && !gameState.isFocusActive() ? `
+                        <button 
+                            class="practice-btn" 
+                            onclick="declareFocus(${ability.id})"
+                            style="background: rgba(80, 100, 80, 0.4); margin-top: 5px;"
+                        >
+                            Declare Focus (3 days)
+                        </button>
+                    ` : ''}
+                    ${gameState.isFocusActive() && gameState.focusChakra === ability.id ? `
+                        <button 
+                            class="practice-btn" 
+                            onclick="clearFocus()"
+                            style="background: rgba(100, 60, 60, 0.4); margin-top: 5px;"
+                        >
+                            Break Focus (penalty)
+                        </button>
+                    ` : ''}
+                    
+                    <div class="challenges-section">
+                        <button class="toggle-challenges-btn" onclick="toggleChallenges(${ability.id})">
+                            💪 Growth Challenges (${(gameState.completedChallenges[ability.id]?.minor?.length || 0) + (gameState.completedChallenges[ability.id]?.major?.length || 0)}/7 + ${gameState.isRiteCompleted(ability.id) ? '1 Rite' : '0 Rites'})
+                        </button>
+                        <div id="challenges-${ability.id}" class="challenges-list">
+                            <div class="challenges-header">Push beyond comfort. Build real strength.</div>
+                            
+                            <!-- MINOR CHALLENGES -->
+                            <div class="challenge-tier">
+                                <div class="tier-header minor">MINOR — Daily Practices</div>
+                                ${ability.challenges.minor.map((challenge, idx) => {
+                                    const completed = gameState.isChallengeCompleted(ability.id, 'minor', idx);
+                                    return `
+                                        <div class="challenge-card ${completed ? 'completed' : ''}" onclick="toggleChallenge(${ability.id}, 'minor', ${idx})">
+                                            <div class="challenge-title">
+                                                <span>${challenge.title}</span>
+                                                <div class="challenge-checkbox ${completed ? 'completed' : ''}" onclick="event.stopPropagation(); toggleChallenge(${ability.id}, 'minor', ${idx})">${completed ? '✓' : ''}</div>
+                                            </div>
+                                            <div class="challenge-desc">${challenge.description}</div>
+                                            <div class="challenge-growth">↑ ${challenge.growth}</div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+
+                            <!-- MAJOR CHALLENGES -->
+                            <div class="challenge-tier">
+                                <div class="tier-header major">MAJOR — Identity-Level Work</div>
+                                ${ability.challenges.major.map((challenge, idx) => {
+                                    const completed = gameState.isChallengeCompleted(ability.id, 'major', idx);
+                                    return `
+                                        <div class="challenge-card ${completed ? 'completed' : ''}" onclick="toggleChallenge(${ability.id}, 'major', ${idx})">
+                                            <div class="challenge-title">
+                                                <span>${challenge.title}</span>
+                                                <div class="challenge-checkbox ${completed ? 'completed' : ''}" onclick="event.stopPropagation(); toggleChallenge(${ability.id}, 'major', ${idx})">${completed ? '✓' : ''}</div>
+                                            </div>
+                                            <div class="challenge-desc">${challenge.description}</div>
+                                            <div class="challenge-growth">↑ ${challenge.growth}</div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+
+                            <!-- RITE -->
+                            <div class="challenge-tier">
+                                <div class="tier-header rite">RITE — Irreversible Transformation</div>
+                                ${(() => {
+                                    const rite = ability.challenges.rite;
+                                    const riteCompleted = gameState.isRiteCompleted(ability.id);
+                                    const chakraUnlocked = gameState.isUnlocked(ability.id);
+                                    const locked = !chakraUnlocked;
+                                    
+                                    return `
+                                        <div class="rite-card ${locked ? 'locked' : ''} ${riteCompleted ? 'completed' : ''}" 
+                                             onclick="${locked ? '' : `openRiteModal(${ability.id})`}">
+                                            <div class="rite-title">${rite.title}</div>
+                                            <div class="rite-status">
+                                                ${locked ? '🔒 Unlock chakra to access this rite' : riteCompleted ? '⚡ COMPLETED — Marked permanently' : '⚠️ One-time only. Cannot be undone.'}
+                                            </div>
+                                            ${!locked ? `<div class="challenge-desc">${rite.description}</div>` : ''}
+                                            ${riteCompleted ? `
+                                                <div class="rite-scar">
+                                                    <strong>Scar:</strong> ${gameState.getRiteTestimony(ability.id)}
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    `;
+                                })()}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                chakrasContainer.appendChild(chakraDiv);
+            });
+
+            // Check if all practiced today
+            const allPracticedOrUnlocked = ABILITIES.every(ab => 
+                !gameState.canPractice(ab.id) || gameState.isUnlocked(ab.id)
+            );
+
+            if (allPracticedOrUnlocked && !gameState.isFullyEnlightened()) {
+                const nextDayBtn = document.createElement('button');
+                nextDayBtn.className = 'practice-btn';
+                nextDayBtn.textContent = 'Advance to Next Day';
+                nextDayBtn.style.display = 'block';
+                nextDayBtn.style.margin = '20px auto';
+                nextDayBtn.style.padding = '12px 30px';
+                nextDayBtn.onclick = nextDay;
+                chakrasContainer.appendChild(nextDayBtn);
+            }
+        }
+
+        // Initial render
+        render();
+
+        // Close modal on background click
+        document.getElementById('practiceModal').addEventListener('click', (e) => {
+            if (e.target.id === 'practiceModal') {
+                document.getElementById('practiceModal').classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>
