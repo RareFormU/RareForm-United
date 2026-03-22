@@ -1,0 +1,3017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Hot Potato Escape</title>
+<script src="https://unpkg.com/@solana/web3.js@1.95.2/lib/index.iife.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.botpress.cloud/webchat/v3.5/inject.js"></script>
+<script src="https://files.bpcontent.cloud/2026/01/15/22/20260115223334-XK8SBILJ.js" defer></script>
+
+<style>
+  :root{
+    --bg0:#050509;
+    --panel:#0f1526;
+    --panel2:#121a2f;
+    --accent:#ff5a2a;
+    --text:#e8edf7;
+    --muted:rgba(232,237,247,.72);
+    --good:#22c55e;
+    --bad:#ff4b6b;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;background:var(--bg0);color:var(--text);font-family:system-ui;overflow:hidden;touch-action:none}
+  #wrap{display:flex;height:100vh;gap:14px;padding:14px;max-width:1400px;margin:auto}
+  #game{
+    flex:1;position:relative;border-radius:16px;overflow:hidden;
+    background:linear-gradient(180deg,#1a1515,#0b0606);
+    box-shadow:0 12px 40px rgba(255,90,42,.25);touch-action:none
+  }
+  #renderCanvas{width:100%;height:100%;display:block;touch-action:none}
+  #side{
+    width:360px;background:var(--panel);border-radius:16px;padding:14px;
+    display:flex;flex-direction:column;gap:12px;box-shadow:0 12px 40px rgba(0,0,0,.25);
+  }
+  .topRow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  h3{margin:0;font-size:12px;letter-spacing:.15em;color:var(--accent);text-transform:uppercase}
+  .statRow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .stat{
+    background:var(--panel2);border-radius:12px;padding:10px;font-weight:800;
+    display:flex;justify-content:space-between;align-items:center
+  }
+  .stat span{color:var(--accent)}
+  .btnRow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  button{
+    border:0;border-radius:999px;padding:10px 12px;font-weight:900;cursor:pointer;
+    letter-spacing:.06em;text-transform:uppercase;font-size:12px;
+    transition:transform .08s ease,opacity .12s ease,background .12s ease;
+  }
+  button:hover{transform:translateY(-1px)}
+  button:active{transform:translateY(0)}
+  .gold{background:var(--accent);color:#111}
+  .dark{background:#1c2742;color:#fff}
+  .ghost{background:transparent;color:var(--text);border:1px dashed rgba(255,255,255,.18)}
+  .locked{opacity:.45;cursor:not-allowed}
+  .tiny{font-size:11px;color:var(--muted);line-height:1.35}
+  .divider{height:1px;background:rgba(255,255,255,.06);margin:2px 0}
+  .log{flex:1;overflow:auto;font-size:12px;background:rgba(0,0,0,.12);border-radius:12px;padding:10px}
+  .log div{margin-bottom:6px}
+  .ok{color:var(--good);font-weight:900}
+  .no{color:var(--bad);font-weight:900}
+  .pill{
+    display:inline-flex;align-items:center;gap:8px;
+    background:rgba(255,255,255,.06);border-radius:999px;padding:6px 10px;
+    font-size:12px;color:var(--muted)
+  }
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 10px rgba(34,197,94,.75)}
+  .tabs{display:flex;gap:8px;margin-bottom:8px}
+  .tab-btn{
+    flex:1;padding:8px;background:var(--panel2);border:none;color:var(--muted);
+    font-size:11px;text-transform:uppercase;letter-spacing:.08em;border-radius:8px;cursor:pointer;
+  }
+  .tab-btn.active{background:var(--accent);color:#111}
+  .tab-content{display:none}
+  .tab-content.active{display:block}
+
+  @media (max-width:900px) and (orientation:portrait){
+    html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden}
+    #wrap{width:100vw;height:100vh;margin:0;padding:0;overflow:hidden;max-width:none}
+    #game{position:fixed;inset:0;width:100vw;height:100vh;border-radius:0;z-index:1}
+    #renderCanvas{width:100%;height:100%}
+    #mobileMenuBtn{
+      position:fixed;top:12px;right:12px;z-index:5;
+      width:44px;height:44px;border-radius:12px;border:none;
+      background:rgba(15,18,32,0.9);color:#ff5a2a;font-size:22px;
+    }
+    #side{
+      position:fixed;left:0;right:0;bottom:-100%;height:70vh;
+      background:#0b1320;border-radius:20px 20px 0 0;z-index:4;
+      transition:bottom .3s ease;overflow-y:auto;padding:20px;
+    }
+    #side.open{bottom:0}
+    #hud-bottom-left{
+      position:fixed;left:12px;bottom:12px;z-index:3;
+      display:flex;flex-direction:column;gap:6px;pointer-events:none;
+    }
+    #hud-bottom-right{
+      position:fixed;right:12px;bottom:12px;z-index:3;
+      display:flex;flex-direction:column;gap:6px;align-items:flex-end;pointer-events:none;
+    }
+    .hud-pill{
+      background:rgba(15,18,32,0.85);backdrop-filter:blur(4px);color:#ff5a2a;
+      padding:6px 10px;border-radius:10px;font-size:13px;font-weight:800;
+      min-width:64px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.4);
+    }
+    .hud-btn{
+      background:rgba(15,18,32,0.9);backdrop-filter:blur(4px);color:#ff5a2a;
+      border:2px solid rgba(255,90,42,0.5);border-radius:10px;
+      width:48px;height:48px;font-size:24px;font-weight:900;
+      cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.4);
+      transition:all 0.15s ease;pointer-events:auto;
+    }
+    .hud-btn:active{
+      background:rgba(255,90,42,0.3);transform:scale(0.95);
+    }
+  }
+  @media (min-width:900px){
+    #mobileMenuBtn,#hud-bottom-left,#hud-bottom-right{display:none!important}
+  }
+  
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+</style>
+</head>
+
+<body>
+<div id="wrap">
+  <div id="game"><canvas id="renderCanvas"></canvas>
+    <div id="death-flash" style="position:absolute;inset:0;background:rgba(255,50,0,0);pointer-events:none;transition:background 0.1s;"></div>
+    <div id="level-transition" style="position:absolute;inset:0;display:none;justify-content:center;align-items:center;background:rgba(0,0,0,0.9);z-index:10;flex-direction:column;gap:20px;">
+      <div id="level-complete-text" style="font-size:48px;font-weight:900;color:var(--accent);text-transform:uppercase;letter-spacing:0.1em;transform:scale(0);transition:transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);">
+        Level <span id="completed-level">1</span> Complete!
+      </div>
+      <div id="level-stats" style="font-size:24px;color:var(--text);opacity:0;transition:opacity 0.5s ease 0.3s;text-align:center;">
+        <div style="margin:10px 0;">⭐ +<span id="level-bonus">0</span> Level Bonus</div>
+        <div style="margin:10px 0;">⏱️ +<span id="time-bonus">0</span> Time Bonus</div>
+        <div style="margin:10px 0;color:var(--accent);font-weight:900;">Total: <span id="total-earned">0</span> pts</div>
+      </div>
+      <div id="next-level-text" style="font-size:32px;font-weight:900;color:var(--good);opacity:0;transition:opacity 0.5s ease 1s;animation:pulse 1s ease infinite;">
+        Next: Level <span id="next-level">2</span>
+      </div>
+      <div id="difficulty-changes" style="opacity:0;transition:opacity 0.5s ease 1.5s;color:var(--muted);font-size:14px;text-align:center;margin-top:10px;">
+        <div style="font-size:18px;margin-bottom:10px;color:var(--accent);" id="platform-type-display">🧈 New Platform Type!</div>
+        <div>⏱️ Timer: <span id="new-time">57</span>s</div>
+        <div>🌋 Lava Speed: <span id="lava-speed">+15%</span></div>
+        <div>💀 Danger: <span id="danger-level">Increasing</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="hud-bottom-left">
+    <div class="hud-pill">Jumps <span id="mobile-jumps">0</span></div>
+    <div class="hud-pill">Level <span id="mobile-lvl">1</span></div>
+    <div class="hud-pill" id="mobile-timer-pill">⏱️ <span id="mobile-timer">60.0</span>s</div>
+  </div>
+  
+  <!-- Combo Popup -->
+  <div id="combo-popup" style="
+    position:fixed;
+    top:45%;
+    left:50%;
+    transform:translate(-50%, -50%) scale(0);
+    font-size:64px;
+    font-weight:900;
+    color:#ffdd00;
+    text-shadow:0 0 30px rgba(255,221,0,1), 0 0 60px rgba(255,136,0,0.8), 0 6px 12px rgba(0,0,0,0.8);
+    pointer-events:none;
+    z-index:10;
+    opacity:0;
+    transition:all 0.15s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  ">
+    <div id="combo-text" style="
+      background:linear-gradient(135deg, #ffdd00 0%, #ff8800 100%);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      background-clip:text;
+      filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+    ">COMBO x2!</div>
+  </div>
+  
+  <div id="hud-bottom-right">
+    <div class="hud-pill">Score <span id="mobile-score">0</span></div>
+    <div style="display:flex;gap:6px;margin-top:6px;">
+      <button id="rotate-left-btn" class="hud-btn">◄</button>
+      <button id="rotate-right-btn" class="hud-btn">►</button>
+    </div>
+  </div>
+
+  <button id="mobileMenuBtn">☰</button>
+
+  <div id="side">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="game">Game</button>
+      <button class="tab-btn" data-tab="wallet">Wallet</button>
+    </div>
+
+    <div class="tab-content active" id="tab-game">
+      <div class="topRow">
+        <h3>🥔 Hot Potato Escape</h3>
+        <div class="pill"><span class="dot"></span>Live</div>
+      </div>
+      <div class="statRow">
+        <div class="stat">Level <span id="lvl">1</span></div>
+        <div class="stat">Score <span id="score">0</span></div>
+        <div class="stat">Jumps <span id="jumps">0</span></div>
+        <div class="stat">Best <span id="best">0 (L0)</span></div>
+      </div>
+      <div style="background:var(--panel2);border-radius:12px;padding:10px;text-align:center;">
+        <span style="color:var(--muted);font-size:11px;display:block;margin-bottom:4px;">ALTITUDE</span>
+        <span id="altitude" style="color:var(--accent);font-weight:900;font-size:16px;">0</span>m
+      </div>
+      <div id="timer-display" style="background:var(--panel2);border-radius:12px;padding:10px;text-align:center;font-weight:900;font-size:18px;">
+        <span style="color:var(--muted);font-size:11px;display:block;margin-bottom:4px;">TIME</span>
+        <span id="timer">60.0</span>s
+      </div>
+      <div id="combo-display" style="display:none;background:var(--accent);color:#111;text-align:center;padding:8px;border-radius:12px;font-weight:900;animation:pulse 0.5s ease"></div>
+      <div class="btnRow">
+        <button class="dark" id="resetBtn">Reset Run</button>
+        <button class="ghost" id="helpBtn">How to Play</button>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;background:var(--panel2);border-radius:12px;padding:10px;">
+        <button class="dark" id="rotate-left-desktop" style="flex:1;padding:12px;font-size:20px;">◄</button>
+        <div style="text-align:center;">
+          <span style="font-size:11px;color:var(--muted);display:block;">ROTATE VIEW</span>
+          <span id="auto-rotate-status" style="font-size:9px;color:var(--good);">AUTO ON</span>
+        </div>
+        <button class="dark" id="rotate-right-desktop" style="flex:1;padding:12px;font-size:20px;">►</button>
+      </div>
+      <div class="tiny" id="saveLine">🥔 Press SPACE to toggle auto-rotate</div>
+      <h3>Log</h3>
+      <div class="log" id="log"></div>
+    </div>
+
+    <div class="tab-content" id="tab-wallet">
+      <div class="topRow"><h3>Wallet & Rewards</h3></div>
+      <button class="gold" id="walletBtn">Connect Wallet</button>
+      <div class="statRow" style="margin-top:16px;">
+        <div class="stat">Points <span id="wallet-pts">0</span></div>
+      </div>
+      <div class="tiny" style="margin-top:12px;">Connect wallet to save your best score!</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== GAME STATE - DECLARED FIRST =====
+const platforms = [];
+const explodingPlatforms = [];
+const friesParticles = [];
+const levelMarkers = [];
+const steamParticles = [];
+const bubbleParticles = [];
+const butterDrips = []; // Dripping butter particles!
+let highestPlatformY = 0;
+let nextLevelThreshold = 5;
+let highestPlayerY = 0; // Track highest point player reached
+const SPAWN_AHEAD_DISTANCE = 15; // Spawn platforms this far ahead
+const PLATFORM_CLEANUP_DISTANCE = 20; // Remove platforms this far behind
+
+let level = 1;
+let score = 0;
+let jumps = 0;
+let bestScore = 0;
+let bestLevel = 0;
+let walletPubkey = null;
+let saveKey = null;
+let failed = false;
+let deathAnimationTimer = 0;
+const DEATH_ANIMATION_DURATION = 1.5;
+let friesExploded = false;
+let levelTransitioning = false;
+
+// Screen shake system
+let screenShake = 0;
+let screenShakeDecay = 0.95;
+let levelTransitionTimer = 0;
+const LEVEL_TRANSITION_DURATION = 2.5;
+
+let lavaY = -1.5;
+const LAVA_RISE_SPEED = 0.021; // Much faster - catches player in ~8 seconds
+let currentLavaSpeed = LAVA_RISE_SPEED;
+const LAVA_SPEED_MULTIPLIER_PER_LEVEL = 0.30; // 30% faster each level after level 2!
+
+// Level progression config
+const PLATFORMS_PER_LEVEL = 8;
+const SCORE_PER_LEVEL = 100;
+let platformsCleared = 0;
+let scoreMultiplier = 1;
+let comboCount = 0;
+const MAX_COMBO = 10;
+const COMBO_TIME_WINDOW = 2000; // 2 seconds to maintain combo
+const POINTS_PER_PLATFORM = 100; // Base points per platform
+
+// Timer system - 15 sec for levels 1-5, 10.5 sec for levels 6+
+let levelStartTime = 0;
+let levelTimeLimit = 15000; // 15 seconds for levels 1-5
+const BASE_TIME_EARLY = 15000; // 15 seconds for levels 1-5
+const BASE_TIME_LATER = 10500; // 10.5 seconds for level 6+
+const TIME_DECREASE_PER_LEVEL = 0; // No decrease within tiers
+const MIN_TIME = 10500; // Minimum 10.5 seconds
+let timerWarningShown = false;
+
+let vy = 0;
+let jumping = false;
+let lastLandTime = 0;
+const COMBO_TIMEOUT = 3000; // 3 seconds to maintain combo
+
+// Camera rotation controls
+let cameraRotation = 0;
+let autoRotate = true;
+const AUTO_ROTATE_SPEED = 0.3; // Degrees per frame
+const MANUAL_ROTATE_SPEED = 3; // Degrees when using controls
+let rotateLeft = false;
+let rotateRight = false;
+
+const GRAVITY = -0.015; // Faster falling for quicker jumps
+const CAMERA_ROTATE_SPEED = 0.0003;
+
+let sizzle = 0;
+const MAX_SIZZLE = 100;
+const SIZZLE_THRESHOLD = 50;
+const SIZZLE_RATE = 0.5;
+const SIZZLE_DECAY = 0.2;
+const CLOSE_TO_LAVA = 2.5;
+let currentPlatform = null;
+let playerSpotlight = null;
+let ashParticles = null;
+
+// ===== THREE.JS SETUP =====
+const canvas = document.getElementById('renderCanvas');
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 50);
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.VSMShadowMap; // Better soft shadows for AO effect
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.outputEncoding = THREE.sRGBEncoding;
+
+camera.position.set(0, 4, 8);
+camera.lookAt(0, 1, 0);
+
+// Add atmospheric fog for depth and ambient occlusion feel
+scene.fog = new THREE.FogExp2(0x1a0a0a, 0.015);
+
+// Enhanced lighting setup with better ambient occlusion simulation
+const ambientLight = new THREE.AmbientLight(0x331a0f, 0.15); // Very low ambient for more occlusion
+scene.add(ambientLight);
+
+// Hemisphere light simulates sky/ground ambient occlusion
+const hemiLight = new THREE.HemisphereLight(0xff8844, 0x2a1510, 0.4);
+hemiLight.position.set(0, 20, 0);
+scene.add(hemiLight);
+
+// Main directional light (sun-like) - creates shadows
+const sun = new THREE.DirectionalLight(0xffaa66, 1.2);
+sun.position.set(8, 12, 6);
+sun.castShadow = true;
+sun.shadow.mapSize.width = 4096; // Higher resolution shadows
+sun.shadow.mapSize.height = 4096;
+sun.shadow.camera.left = -15;
+sun.shadow.camera.right = 15;
+sun.shadow.camera.top = 15;
+sun.shadow.camera.bottom = -15;
+sun.shadow.bias = -0.0001;
+sun.shadow.radius = 2; // Softer shadows for more realistic AO
+scene.add(sun);
+
+// Rim light from opposite side
+const rimLight = new THREE.DirectionalLight(0xff6633, 0.6);
+rimLight.position.set(-5, 8, -4);
+scene.add(rimLight);
+
+// Lava glow - multiple lights for better coverage
+const lavaGlow = new THREE.PointLight(0xff3300, 4, 30);
+lavaGlow.position.set(0, -1, 0);
+scene.add(lavaGlow);
+
+const lavaGlow2 = new THREE.PointLight(0xff5500, 2, 20);
+lavaGlow2.position.set(3, -0.5, 3);
+scene.add(lavaGlow2);
+
+const lavaGlow3 = new THREE.PointLight(0xff5500, 2, 20);
+lavaGlow3.position.set(-3, -0.5, -3);
+scene.add(lavaGlow3);
+
+// Spotlight on player for focus
+playerSpotlight = new THREE.SpotLight(0xffd9b3, 1.5, 15, Math.PI / 4, 0.5, 1);
+playerSpotlight.position.set(0, 10, 0);
+playerSpotlight.castShadow = true;
+scene.add(playerSpotlight);
+scene.add(playerSpotlight.target);
+
+scene.fog = new THREE.Fog(0x3a1510, 10, 35);
+scene.background = new THREE.Color(0x2a0f08);
+
+// LAVA FLOOR - Enhanced with realistic boiling animation - DARKER for contrast
+const lavaGeo = new THREE.PlaneGeometry(40, 40, 48, 48);
+const lavaPositions = lavaGeo.attributes.position;
+
+// Add initial wave pattern and color variation
+const lavaColors = new Float32Array(lavaPositions.count * 3);
+for (let i = 0; i < lavaPositions.count; i++) {
+  const x = lavaPositions.getX(i);
+  const z = lavaPositions.getZ(i);
+  const wave = Math.sin(x * 0.2) * Math.cos(z * 0.2) * 0.3;
+  lavaPositions.setZ(i, wave);
+  
+  // Darker color variation for better platform contrast
+  const variation = Math.random();
+  if (variation > 0.85) {
+    // Hot bright spots (deep orange)
+    lavaColors[i * 3] = 1.0;
+    lavaColors[i * 3 + 1] = 0.3;
+    lavaColors[i * 3 + 2] = 0.0;
+  } else if (variation < 0.15) {
+    // Very dark crust spots (almost black)
+    lavaColors[i * 3] = 0.15;
+    lavaColors[i * 3 + 1] = 0.02;
+    lavaColors[i * 3 + 2] = 0.0;
+  } else {
+    // Deep red-orange lava (darker base)
+    lavaColors[i * 3] = 0.6 + Math.random() * 0.2;
+    lavaColors[i * 3 + 1] = 0.1 + Math.random() * 0.1;
+    lavaColors[i * 3 + 2] = 0.0;
+  }
+}
+
+lavaGeo.setAttribute('color', new THREE.BufferAttribute(lavaColors, 3));
+lavaGeo.attributes.position.needsUpdate = true;
+lavaGeo.computeVertexNormals();
+
+const lavaMat = new THREE.MeshStandardMaterial({
+  color: 0xcc2200, // Darker, more saturated red-orange
+  emissive: 0xff3300, // Deep red-orange glow
+  emissiveIntensity: 1.5,
+  roughness: 0.5,
+  metalness: 0.2,
+  vertexColors: true
+});
+
+const lava = new THREE.Mesh(lavaGeo, lavaMat);
+lava.rotation.x = -Math.PI / 2;
+lava.position.y = lavaY;
+lava.userData.time = 0;
+lava.receiveShadow = true; // Receive shadows from potato
+scene.add(lava);
+
+// FRYER BASKET - Appears at level 10+
+let fryerBasket = null;
+
+function createFryerBasket() {
+  const basketGroup = new THREE.Group();
+  
+  // Basket mesh pattern - wire grid
+  const basketMaterial = new THREE.MeshStandardMaterial({
+    color: 0x8B7355, // Brown metal
+    metalness: 0.8,
+    roughness: 0.3,
+    emissive: 0x3a2010,
+    emissiveIntensity: 0.2
+  });
+  
+  const radius = 20;
+  const height = 50;
+  const segments = 32;
+  
+  // Vertical wires
+  for (let i = 0; i < segments; i++) {
+    const angle = (i / segments) * Math.PI * 2;
+    const x = Math.cos(angle) * radius;
+    const z = Math.sin(angle) * radius;
+    
+    const wireGeo = new THREE.CylinderGeometry(0.1, 0.1, height, 4);
+    const wire = new THREE.Mesh(wireGeo, basketMaterial);
+    wire.position.set(x, height / 2, z);
+    basketGroup.add(wire);
+  }
+  
+  // Horizontal rings
+  for (let y = 0; y < height; y += 3) {
+    const ringGeo = new THREE.TorusGeometry(radius, 0.08, 8, segments);
+    const ring = new THREE.Mesh(ringGeo, basketMaterial);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = y;
+    basketGroup.add(ring);
+  }
+  
+  basketGroup.position.y = 0;
+  basketGroup.visible = false; // Hidden until level 10
+  scene.add(basketGroup);
+  
+  return basketGroup;
+}
+
+fryerBasket = createFryerBasket();
+
+// Fire pods system
+const firePods = [];
+const MAX_FIRE_PODS = 15;
+
+function createFirePod() {
+  const podGeo = new THREE.SphereGeometry(0.3, 8, 8);
+  const podMat = new THREE.MeshStandardMaterial({
+    color: 0xff3300,
+    emissive: 0xff6600,
+    emissiveIntensity: 2.0,
+    roughness: 0.2,
+    metalness: 0.5
+  });
+  
+  const pod = new THREE.Mesh(podGeo, podMat);
+  pod.position.x = (Math.random() - 0.5) * 30;
+  pod.position.z = (Math.random() - 0.5) * 30;
+  pod.position.y = lavaY + 0.2;
+  
+  pod.userData = {
+    birthTime: performance.now() * 0.001,
+    lifespan: 1.5 + Math.random() * 2,
+    burstSize: 0.3 + Math.random() * 0.4
+  };
+  
+  scene.add(pod);
+  firePods.push(pod);
+}
+
+function burstFirePod(pod) {
+  // Create burst particles
+  const burstCount = 15 + Math.floor(Math.random() * 10);
+  for (let i = 0; i < burstCount; i++) {
+    const particle = new THREE.Mesh(
+      new THREE.SphereGeometry(0.05 + Math.random() * 0.08, 6, 6),
+      new THREE.MeshStandardMaterial({
+        color: Math.random() > 0.5 ? 0xff6600 : 0xff3300,
+        emissive: 0xff8800,
+        emissiveIntensity: 3.0,
+        transparent: true,
+        opacity: 1
+      })
+    );
+    
+    particle.position.copy(pod.position);
+    
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 0.5 + Math.random() * 1.5;
+    const upSpeed = 0.8 + Math.random() * 1.2;
+    
+    particle.userData = {
+      vx: Math.cos(angle) * speed,
+      vy: upSpeed,
+      vz: Math.sin(angle) * speed,
+      life: 0,
+      maxLife: 0.8 + Math.random() * 0.7
+    };
+    
+    scene.add(particle);
+    friesParticles.push(particle); // Reuse fries particle system for cleanup
+  }
+  
+  // Sound and haptics
+  beep(400 + Math.random() * 200, 0.1);
+  vibrate(30);
+}
+
+function updateFirePods(time) {
+  // Spawn new pods based on level
+  const spawnChance = 0.02 + level * 0.005; // More frequent at higher levels
+  if (firePods.length < MAX_FIRE_PODS && Math.random() < spawnChance) {
+    createFirePod();
+  }
+  
+  // Update existing pods
+  for (let i = firePods.length - 1; i >= 0; i--) {
+    const pod = firePods[i];
+    const age = time - pod.userData.birthTime;
+    
+    // Grow and pulse
+    const growthFactor = Math.min(1, age / pod.userData.lifespan);
+    pod.scale.setScalar(growthFactor * pod.userData.burstSize * (1 + Math.sin(time * 8) * 0.2));
+    pod.material.emissiveIntensity = 2.0 + Math.sin(time * 10) * 1.0;
+    
+    // Keep at lava surface
+    pod.position.y = lavaY + 0.2 + Math.sin(time * 3 + pod.position.x) * 0.1;
+    
+    // Burst when lifespan exceeded
+    if (age > pod.userData.lifespan) {
+      burstFirePod(pod);
+      scene.remove(pod);
+      firePods.splice(i, 1);
+    }
+  }
+}
+
+// VOLCANO WALLS - PS1 Style Rocky Interior
+const volcanoWallTexture = createVolcanoTexture();
+
+// Inner volcano wall - dark rocky texture
+const innerWall = new THREE.Mesh(
+  new THREE.CylinderGeometry(12, 10, 100, 16, 20, true),
+  new THREE.MeshStandardMaterial({
+    map: volcanoWallTexture,
+    color: 0x4a2015,
+    roughness: 0.95,
+    metalness: 0.05,
+    side: THREE.BackSide,
+    emissive: 0x661100,
+    emissiveIntensity: 0.5
+  })
+);
+innerWall.position.y = 48;
+innerWall.receiveShadow = true;
+scene.add(innerWall);
+
+// Outer wall with ledges - creates depth
+const outerWall = new THREE.Mesh(
+  new THREE.CylinderGeometry(18, 14, 100, 16, 10, true),
+  new THREE.MeshStandardMaterial({
+    map: volcanoWallTexture,
+    color: 0x3a1510,
+    roughness: 0.98,
+    metalness: 0.02,
+    side: THREE.BackSide,
+    emissive: 0x441100,
+    emissiveIntensity: 0.3
+  })
+);
+outerWall.position.y = 48;
+outerWall.receiveShadow = true;
+scene.add(outerWall);
+
+// Add rocky protrusions for depth
+for (let i = 0; i < 20; i++) {
+  const angle = (i / 20) * Math.PI * 2;
+  const height = Math.random() * 80 + 10;
+  const radius = 11 + Math.random() * 1;
+  
+  const rock = new THREE.Mesh(
+    new THREE.BoxGeometry(1.5 + Math.random(), 3 + Math.random() * 2, 1 + Math.random()),
+    new THREE.MeshStandardMaterial({
+      color: 0x4a2010,
+      roughness: 0.95,
+      metalness: 0.05,
+      emissive: 0x661100,
+      emissiveIntensity: Math.random() * 0.3
+    })
+  );
+  rock.position.x = Math.cos(angle) * radius;
+  rock.position.y = height;
+  rock.position.z = Math.sin(angle) * radius;
+  rock.rotation.x = Math.random() * 0.5;
+  rock.rotation.y = Math.random() * Math.PI;
+  rock.rotation.z = Math.random() * 0.5;
+  rock.castShadow = true;
+  rock.receiveShadow = true;
+  scene.add(rock);
+}
+
+// Add stalactites hanging from above
+for (let i = 0; i < 15; i++) {
+  const angle = (i / 15) * Math.PI * 2 + Math.random() * 0.5;
+  const radius = 8 + Math.random() * 4;
+  const length = 2 + Math.random() * 4;
+  
+  const stalactite = new THREE.Mesh(
+    new THREE.ConeGeometry(0.3 + Math.random() * 0.3, length, 8),
+    new THREE.MeshStandardMaterial({
+      color: 0x3a1a10,
+      roughness: 0.9,
+      metalness: 0.1,
+      emissive: 0x441100,
+      emissiveIntensity: 0.2
+    })
+  );
+  stalactite.position.x = Math.cos(angle) * radius;
+  stalactite.position.y = 80 + Math.random() * 15;
+  stalactite.position.z = Math.sin(angle) * radius;
+  stalactite.rotation.x = Math.PI;
+  stalactite.rotation.z = (Math.random() - 0.5) * 0.3;
+  stalactite.castShadow = true;
+  scene.add(stalactite);
+}
+
+// Add floating environmental debris for atmosphere
+ashParticles = new THREE.Group();
+
+// Create different types of debris - MORE particles for denser atmosphere
+for (let i = 0; i < 120; i++) {
+  let debris;
+  const debrisType = Math.random();
+  
+  if (debrisType < 0.25) {
+    // Glowing embers - BRIGHTER
+    debris = new THREE.Mesh(
+      new THREE.SphereGeometry(0.04 + Math.random() * 0.04, 8, 8),
+      new THREE.MeshStandardMaterial({ 
+        color: 0xff5500,
+        transparent: true, 
+        opacity: 0.7 + Math.random() * 0.3,
+        emissive: 0xff6600,
+        emissiveIntensity: 2.0,
+        roughness: 0.3,
+        metalness: 0.0
+      })
+    );
+    debris.userData.glow = true;
+  } else if (debrisType < 0.45) {
+    // Burnt potato skins - larger
+    debris = new THREE.Mesh(
+      new THREE.BoxGeometry(0.1, 0.05, 0.15),
+      new THREE.MeshStandardMaterial({ 
+        color: 0x2a1510,
+        roughness: 1.0,
+        metalness: 0.0,
+        transparent: true,
+        opacity: 0.8
+      })
+    );
+    debris.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+  } else if (debrisType < 0.65) {
+    // Fresh potato skins - tan/brown
+    debris = new THREE.Mesh(
+      new THREE.BoxGeometry(0.09, 0.04, 0.13),
+      new THREE.MeshStandardMaterial({ 
+        color: 0x8b6a4a,
+        roughness: 0.9,
+        metalness: 0.0,
+        transparent: true,
+        opacity: 0.75
+      })
+    );
+    debris.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+  } else if (debrisType < 0.8) {
+    // Golden fries - larger
+    debris = new THREE.Mesh(
+      new THREE.BoxGeometry(0.04, 0.18, 0.04),
+      new THREE.MeshStandardMaterial({ 
+        color: 0xf4d03f,
+        roughness: 0.6,
+        metalness: 0.2,
+        emissive: 0xc4a020,
+        emissiveIntensity: 0.3,
+        transparent: true,
+        opacity: 0.7
+      })
+    );
+    debris.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+  } else {
+    // Burnt/dark fries - larger
+    debris = new THREE.Mesh(
+      new THREE.BoxGeometry(0.04, 0.18, 0.04),
+      new THREE.MeshStandardMaterial({ 
+        color: 0x3a2010,
+        roughness: 0.9,
+        metalness: 0.0,
+        transparent: true,
+        opacity: 0.7
+      })
+    );
+    debris.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+  }
+  
+  debris.position.x = (Math.random() - 0.5) * 25;
+  debris.position.y = Math.random() * 100;
+  debris.position.z = (Math.random() - 0.5) * 25;
+  debris.userData.speed = 0.01 + Math.random() * 0.02;
+  debris.userData.drift = Math.random() * Math.PI * 2;
+  debris.userData.rotSpeed = (Math.random() - 0.5) * 0.02;
+  ashParticles.add(debris);
+}
+scene.add(ashParticles);
+
+function createVolcanoTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+  
+  // Base gradient - darker at bottom, lighter at top
+  const gradient = ctx.createLinearGradient(0, 0, 0, 512);
+  gradient.addColorStop(0, '#4a2515');
+  gradient.addColorStop(0.5, '#3a1812');
+  gradient.addColorStop(1, '#2a0f08');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 512, 512);
+  
+  // Large rock formations (PS1 low-poly style)
+  for (let i = 0; i < 200; i++) {
+    const x = Math.random() * 512;
+    const y = Math.random() * 512;
+    const size = Math.random() * 15 + 5;
+    const brightness = Math.floor(Math.random() * 50);
+    const hue = 10 + Math.random() * 15;
+    ctx.fillStyle = `rgb(${hue + brightness}, ${hue/2 + brightness/3}, ${hue/4})`;
+    
+    // Irregular polygons for rocky look
+    ctx.beginPath();
+    for (let j = 0; j < 5; j++) {
+      const angle = (j / 5) * Math.PI * 2;
+      const r = size * (0.7 + Math.random() * 0.6);
+      ctx.lineTo(x + Math.cos(angle) * r, y + Math.sin(angle) * r);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+  
+  // Dark cracks and crevices
+  ctx.strokeStyle = '#0a0503';
+  ctx.lineWidth = 3;
+  for (let i = 0; i < 40; i++) {
+    ctx.beginPath();
+    const startX = Math.random() * 512;
+    const startY = Math.random() * 512;
+    ctx.moveTo(startX, startY);
+    let x = startX;
+    let y = startY;
+    for (let j = 0; j < 8; j++) {
+      x += (Math.random() - 0.5) * 80;
+      y += (Math.random() - 0.5) * 80;
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  
+  // Glowing magma veins - thicker and more visible
+  ctx.strokeStyle = 'rgba(255, 80, 20, 0.8)';
+  ctx.lineWidth = 4;
+  ctx.shadowBlur = 15;
+  ctx.shadowColor = '#ff4400';
+  for (let i = 0; i < 20; i++) {
+    ctx.beginPath();
+    const startX = Math.random() * 512;
+    const startY = Math.random() * 512;
+    ctx.moveTo(startX, startY);
+    let x = startX;
+    let y = startY;
+    for (let j = 0; j < 4; j++) {
+      x += (Math.random() - 0.5) * 100;
+      y += (Math.random() - 0.5) * 100;
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  
+  // Hot spots - glowing areas
+  ctx.shadowBlur = 25;
+  for (let i = 0; i < 30; i++) {
+    const x = Math.random() * 512;
+    const y = Math.random() * 512;
+    const radius = Math.random() * 20 + 10;
+    const hotGradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+    hotGradient.addColorStop(0, 'rgba(255, 120, 40, 0.6)');
+    hotGradient.addColorStop(0.5, 'rgba(200, 60, 20, 0.3)');
+    hotGradient.addColorStop(1, 'rgba(100, 30, 10, 0)');
+    ctx.fillStyle = hotGradient;
+    ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+  }
+  
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(4, 8);
+  return texture;
+}
+
+// MR. POTATO HEAD CHARACTER - Enhanced realistic version
+function createPotatoHead() {
+  const group = new THREE.Group();
+  
+  // Main potato body - realistic skin texture with spots
+  const bodyGeo = new THREE.SphereGeometry(0.35, 32, 32);
+  bodyGeo.scale(1, 1.35, 0.95);
+  const bodyMat = new THREE.MeshStandardMaterial({ 
+    color: 0xd4a574,
+    roughness: 0.7,
+    metalness: 0.1,
+    emissive: 0x9a7a4a, 
+    emissiveIntensity: 0.05
+  });
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.castShadow = true;
+  body.receiveShadow = true;
+  body.position.y = 0.15;
+  group.add(body);
+  group.userData.body = body;
+  
+  // Add potato skin spots (eyes/blemishes)
+  const spotMat = new THREE.MeshStandardMaterial({
+    color: 0x6a4a2a,
+    roughness: 0.9,
+    metalness: 0.0
+  });
+  
+  // Create random skin spots
+  for (let i = 0; i < 8; i++) {
+    const spot = new THREE.Mesh(
+      new THREE.SphereGeometry(0.03 + Math.random() * 0.02, 8, 8),
+      spotMat
+    );
+    
+    // Position on surface of potato
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.random() * Math.PI;
+    const radius = 0.35;
+    
+    spot.position.x = radius * Math.sin(phi) * Math.cos(theta) * 1.0;
+    spot.position.y = 0.15 + radius * Math.cos(phi) * 1.35;
+    spot.position.z = radius * Math.sin(phi) * Math.sin(theta) * 0.95;
+    
+    spot.scale.z = 0.3; // Flatten against surface
+    spot.lookAt(0, 0.15, 0); // Face center
+    spot.castShadow = true;
+    group.add(spot);
+  }
+
+  // Eyes - glossy and reflective
+  const eyeWhiteMat = new THREE.MeshStandardMaterial({ 
+    color: 0xffffff,
+    roughness: 0.2,
+    metalness: 0.1
+  });
+  const eyePupilMat = new THREE.MeshStandardMaterial({ 
+    color: 0x1a1a2e,
+    roughness: 0.1,
+    metalness: 0.3,
+    emissive: 0x0a0a1a,
+    emissiveIntensity: 0.2
+  });
+  
+  const leftEyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), eyeWhiteMat);
+  leftEyeWhite.position.set(-0.15, 0.35, 0.28);
+  leftEyeWhite.scale.z = 0.4;
+  leftEyeWhite.castShadow = true;
+  group.add(leftEyeWhite);
+  
+  const rightEyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), eyeWhiteMat);
+  rightEyeWhite.position.set(0.15, 0.35, 0.28);
+  rightEyeWhite.scale.z = 0.4;
+  rightEyeWhite.castShadow = true;
+  group.add(rightEyeWhite);
+  
+  const leftPupil = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 16), eyePupilMat);
+  leftPupil.position.set(-0.15, 0.35, 0.35);
+  leftPupil.castShadow = true;
+  group.add(leftPupil);
+  
+  const rightPupil = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 16), eyePupilMat);
+  rightPupil.position.set(0.15, 0.35, 0.35);
+  rightPupil.castShadow = true;
+  group.add(rightPupil);
+
+  // Nose - slightly glossy
+  const noseMat = new THREE.MeshStandardMaterial({ 
+    color: 0xff6b4a,
+    roughness: 0.5,
+    metalness: 0.1,
+    emissive: 0xcc4a2a, 
+    emissiveIntensity: 0.1
+  });
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.18, 12), noseMat);
+  nose.rotation.x = Math.PI / 2;
+  nose.position.set(0, 0.2, 0.35);
+  nose.castShadow = true;
+  group.add(nose);
+
+  // Mouth - friendly smile (keep as line)
+  const mouthCurve = new THREE.EllipseCurve(0, 0, 0.15, 0.08, 0, Math.PI, false, 0);
+  const mouthPoints = mouthCurve.getPoints(20);
+  const mouthGeometry = new THREE.BufferGeometry().setFromPoints(mouthPoints);
+  const mouthMat = new THREE.LineBasicMaterial({ color: 0x3a2a2a, linewidth: 3 });
+  const mouth = new THREE.Line(mouthGeometry, mouthMat);
+  mouth.position.set(0, 0.05, 0.33);
+  mouth.rotation.x = Math.PI;
+  group.add(mouth);
+
+  // Ears - textured
+  const earMat = new THREE.MeshStandardMaterial({ 
+    color: 0xc49564,
+    roughness: 0.75,
+    metalness: 0.05,
+    emissive: 0x8a6a3a, 
+    emissiveIntensity: 0.05
+  });
+  const leftEar = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 16), earMat);
+  leftEar.scale.set(0.6, 1, 0.5);
+  leftEar.position.set(-0.35, 0.2, 0);
+  leftEar.castShadow = true;
+  leftEar.receiveShadow = true;
+  group.add(leftEar);
+  
+  const rightEar = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 16), earMat);
+  rightEar.scale.set(0.6, 1, 0.5);
+  rightEar.position.set(0.35, 0.2, 0);
+  rightEar.castShadow = true;
+  rightEar.receiveShadow = true;
+  group.add(rightEar);
+
+  // Cool sneakers - glossy plastic look
+  const shoeMat = new THREE.MeshStandardMaterial({ 
+    color: 0xff5a2a,
+    roughness: 0.3,
+    metalness: 0.2,
+    emissive: 0xcc3a0a, 
+    emissiveIntensity: 0.2
+  });
+  const leftShoe = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.1, 0.22, 2, 2, 2), shoeMat);
+  leftShoe.position.set(-0.12, -0.3, 0.05);
+  leftShoe.castShadow = true;
+  leftShoe.receiveShadow = true;
+  group.add(leftShoe);
+  
+  const rightShoe = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.1, 0.22, 2, 2, 2), shoeMat);
+  rightShoe.position.set(0.12, -0.3, 0.05);
+  rightShoe.castShadow = true;
+  rightShoe.receiveShadow = true;
+  group.add(rightShoe);
+  
+  // POTATO SKIN CLOTHING - Wrapped around body like actual clothes
+  const skinClothingMat = new THREE.MeshStandardMaterial({
+    color: 0x8b6a4a,
+    roughness: 0.95,
+    metalness: 0.0,
+    emissive: 0x5a4a2a,
+    emissiveIntensity: 0.05
+  });
+  
+  // SHIRT - Wraps around upper body
+  const shirtGeo = new THREE.SphereGeometry(0.37, 32, 32);
+  shirtGeo.scale(1, 0.8, 0.95); // Match body shape but slightly larger
+  const shirt = new THREE.Mesh(shirtGeo, skinClothingMat);
+  shirt.position.y = 0.25; // Upper torso
+  shirt.castShadow = true;
+  shirt.receiveShadow = true;
+  group.add(shirt);
+  
+  // PANTS - Wrap around lower body
+  const pantsGeo = new THREE.SphereGeometry(0.36, 32, 32);
+  pantsGeo.scale(1, 0.6, 0.95); // Match body shape
+  const pants = new THREE.Mesh(pantsGeo, skinClothingMat);
+  pants.position.y = -0.05; // Lower torso
+  pants.castShadow = true;
+  pants.receiveShadow = true;
+  group.add(pants);
+  
+  // COLLAR - Ring around neck
+  const collarGeo = new THREE.TorusGeometry(0.25, 0.04, 8, 16);
+  const collar = new THREE.Mesh(collarGeo, skinClothingMat);
+  collar.rotation.x = Math.PI / 2;
+  collar.position.y = 0.42;
+  collar.castShadow = true;
+  group.add(collar);
+  
+  // SLEEVES - Cover the arms
+  const sleeveGeo = new THREE.CylinderGeometry(0.09, 0.07, 0.25, 12);
+  const leftSleeve = new THREE.Mesh(sleeveGeo, skinClothingMat);
+  leftSleeve.position.set(-0.32, 0.15, 0);
+  leftSleeve.rotation.z = Math.PI / 6;
+  leftSleeve.castShadow = true;
+  group.add(leftSleeve);
+  
+  const rightSleeve = new THREE.Mesh(sleeveGeo, skinClothingMat);
+  rightSleeve.position.set(0.32, 0.15, 0);
+  rightSleeve.rotation.z = -Math.PI / 6;
+  rightSleeve.castShadow = true;
+  group.add(rightSleeve);
+  
+  // BELT - Separates shirt and pants
+  const beltGeo = new THREE.TorusGeometry(0.35, 0.03, 8, 24);
+  const beltMat = new THREE.MeshStandardMaterial({
+    color: 0x5a4a2a,
+    roughness: 0.7,
+    metalness: 0.2
+  });
+  const belt = new THREE.Mesh(beltGeo, beltMat);
+  belt.rotation.x = Math.PI / 2;
+  belt.position.y = 0.08;
+  belt.castShadow = true;
+  group.add(belt);
+  
+  // PATCHES/DETAILS on clothing
+  const patchMat = new THREE.MeshStandardMaterial({
+    color: 0x6a5a3a,
+    roughness: 1.0,
+    metalness: 0.0
+  });
+  
+  // Chest patches
+  for (let i = 0; i < 5; i++) {
+    const patch = new THREE.Mesh(
+      new THREE.CircleGeometry(0.03 + Math.random() * 0.02, 8),
+      patchMat
+    );
+    const theta = (Math.random() - 0.5) * Math.PI * 0.6;
+    const phi = Math.PI / 2 + (Math.random() - 0.5) * 0.4;
+    patch.position.x = 0.37 * Math.sin(phi) * Math.cos(theta);
+    patch.position.y = 0.25 + 0.37 * 0.8 * Math.cos(phi);
+    patch.position.z = 0.37 * 0.95 * Math.sin(phi) * Math.sin(theta);
+    patch.lookAt(0, 0.25, 0);
+    patch.castShadow = true;
+    group.add(patch);
+  }
+  
+  // Pant patches
+  for (let i = 0; i < 4; i++) {
+    const patch = new THREE.Mesh(
+      new THREE.CircleGeometry(0.025 + Math.random() * 0.02, 8),
+      patchMat
+    );
+    const theta = (Math.random() - 0.5) * Math.PI * 0.6;
+    const phi = Math.PI / 2 + (Math.random() - 0.5) * 0.3;
+    patch.position.x = 0.36 * Math.sin(phi) * Math.cos(theta);
+    patch.position.y = -0.05 + 0.36 * 0.6 * Math.cos(phi);
+    patch.position.z = 0.36 * 0.95 * Math.sin(phi) * Math.sin(theta);
+    patch.lookAt(0, -0.05, 0);
+    patch.castShadow = true;
+    group.add(patch);
+  }
+
+  // Arms - match body texture
+  const armMat = new THREE.MeshStandardMaterial({ 
+    color: 0xd4a574,
+    roughness: 0.7,
+    metalness: 0.1,
+    emissive: 0x9a7a4a, 
+    emissiveIntensity: 0.05
+  });
+  const leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.35, 12), armMat);
+  leftArm.position.set(-0.32, 0.05, 0);
+  leftArm.rotation.z = Math.PI / 6;
+  leftArm.castShadow = true;
+  leftArm.receiveShadow = true;
+  group.add(leftArm);
+  group.userData.leftArm = leftArm;
+  
+  const rightArm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.35, 12), armMat);
+  rightArm.position.set(0.32, 0.05, 0);
+  rightArm.rotation.z = -Math.PI / 6;
+  rightArm.castShadow = true;
+  rightArm.receiveShadow = true;
+  group.add(rightArm);
+  group.userData.rightArm = rightArm;
+  
+  // Store facial features for animation
+  group.userData.mouth = mouth;
+  group.userData.leftPupil = leftPupil;
+  group.userData.rightPupil = rightPupil;
+  group.userData.leftEyeWhite = leftEyeWhite;
+  group.userData.rightEyeWhite = rightEyeWhite;
+
+  return group;
+}
+
+const player = createPotatoHead();
+player.position.set(0, 1, 3);
+player.userData.vx = 0;
+player.userData.vz = 0;
+scene.add(player);
+
+// Add shadow blob beneath potato for landing guidance
+const shadowGeo = new THREE.PlaneGeometry(0.6, 0.6);
+const shadowMat = new THREE.MeshBasicMaterial({
+  color: 0x000000,
+  transparent: true,
+  opacity: 0.4,
+  depthWrite: false
+});
+const shadowBlob = new THREE.Mesh(shadowGeo, shadowMat);
+shadowBlob.rotation.x = -Math.PI / 2;
+shadowBlob.position.y = 0.01; // Just above ground
+scene.add(shadowBlob);
+player.userData.shadow = shadowBlob;
+
+// Steam particle material
+const steamMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 });
+
+// Bubble particle material
+const bubbleMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4 });
+
+function resizeRenderer() {
+  const rect = canvas.getBoundingClientRect();
+  camera.aspect = rect.width / rect.height;
+  camera.updateProjectionMatrix();
+  renderer.setSize(rect.width, rect.height, false);
+}
+window.addEventListener('resize', resizeRenderer);
+resizeRenderer();
+
+// ===== AUDIO =====
+let audioCtx = null;
+function ensureAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+function beep(freq = 300, dur = 0.06) {
+  try {
+    ensureAudio();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+    o.frequency.value = freq; o.start();
+    g.gain.setValueAtTime(0.18, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
+    o.stop(audioCtx.currentTime + dur);
+  } catch (_) {}
+}
+function vibrate(ms) { if (navigator.vibrate) navigator.vibrate(ms); }
+
+// ===== UI =====
+const lvlEl = document.getElementById("lvl");
+const scoreEl = document.getElementById("score");
+const jumpsEl = document.getElementById("jumps");
+const bestEl = document.getElementById("best");
+const logEl = document.getElementById("log");
+const walletBtn = document.getElementById("walletBtn");
+const resetBtn = document.getElementById("resetBtn");
+const helpBtn = document.getElementById("helpBtn");
+const mobileJumpsEl = document.getElementById("mobile-jumps");
+const mobileLvlEl = document.getElementById("mobile-lvl");
+const mobileScoreEl = document.getElementById("mobile-score");
+const timerEl = document.getElementById("timer");
+const mobileTimerEl = document.getElementById("mobile-timer");
+const timerDisplayEl = document.getElementById("timer-display");
+const mobileTimerPillEl = document.getElementById("mobile-timer-pill");
+const altitudeEl = document.getElementById("altitude");
+
+function log(msg, cls = "") {
+  const div = document.createElement("div");
+  div.innerHTML = cls ? `<span class="${cls}">${msg}</span>` : msg;
+  logEl.prepend(div);
+}
+
+function updateUI() {
+  lvlEl.textContent = level;
+  mobileLvlEl.textContent = level;
+  scoreEl.textContent = score;
+  mobileScoreEl.textContent = score;
+  jumpsEl.textContent = jumps;
+  mobileJumpsEl.textContent = jumps;
+  bestEl.textContent = `${bestScore} (L${bestLevel})`;
+  
+  // Update altitude (height climbed)
+  const altitude = Math.max(0, Math.floor((player.position.y - 1) * 10));
+  if (altitudeEl) altitudeEl.textContent = altitude;
+  
+  // Update timer
+  const elapsed = Date.now() - levelStartTime;
+  const remaining = Math.max(0, levelTimeLimit - elapsed);
+  const seconds = (remaining / 1000).toFixed(1);
+  
+  if (timerEl) timerEl.textContent = seconds;
+  if (mobileTimerEl) mobileTimerEl.textContent = seconds;
+  
+  // Color code timer based on remaining time
+  const timePercent = remaining / levelTimeLimit;
+  let timerColor = 'var(--text)';
+  if (timePercent < 0.25) {
+    timerColor = 'var(--bad)';
+    if (timerDisplayEl) timerDisplayEl.style.animation = 'pulse 0.5s ease infinite';
+    if (mobileTimerPillEl) mobileTimerPillEl.style.animation = 'pulse 0.5s ease infinite';
+  } else if (timePercent < 0.5) {
+    timerColor = 'var(--accent)';
+    if (timerDisplayEl) timerDisplayEl.style.animation = '';
+    if (mobileTimerPillEl) mobileTimerPillEl.style.animation = '';
+  } else {
+    if (timerDisplayEl) timerDisplayEl.style.animation = '';
+    if (mobileTimerPillEl) mobileTimerPillEl.style.animation = '';
+  }
+  
+  if (timerEl) timerEl.style.color = timerColor;
+  if (mobileTimerEl) mobileTimerEl.style.color = timerColor;
+  
+  // Update combo display
+  if (comboCount > 1) {
+    const comboEl = document.getElementById("combo-display");
+    if (comboEl) {
+      comboEl.textContent = `${comboCount}x COMBO!`;
+      comboEl.style.display = "block";
+    }
+  } else {
+    const comboEl = document.getElementById("combo-display");
+    if (comboEl) comboEl.style.display = "none";
+  }
+}
+
+// ===== PLATFORMS =====
+function createPlatform(type, position) {
+  let mat;
+  
+  // Determine platform type based on level
+  const levelType = getPlatformTypeForLevel(level);
+  
+  // Rare golden platform (10% chance at level 3+)
+  if (level >= 3 && Math.random() < 0.1) {
+    type = 'golden';
+  } else if (!type) {
+    type = levelType;
+  }
+  
+  if (type === 'butter') {
+    mat = new THREE.MeshStandardMaterial({ 
+      color: 0xFFD700, // GOLD! Shiny bright gold
+      roughness: 0.15, // Very smooth and shiny
+      metalness: 0.7, // More metallic
+      emissive: 0xFFA500, // Orange glow
+      emissiveIntensity: 0.8 // Strong glow!
+    });
+  } else if (type === 'melting_butter') {
+    // Levels 2-5: Melting butter - bright yellow-orange
+    mat = new THREE.MeshStandardMaterial({ 
+      color: 0xffc800,
+      roughness: 0.2,
+      metalness: 0.4,
+      emissive: 0xff9900, 
+      emissiveIntensity: 0.6
+    });
+  } else if (type === 'charcoal') {
+    // Levels 6-10: Charcoal that heats up
+    mat = new THREE.MeshStandardMaterial({ 
+      color: 0x2a2a2a,
+      roughness: 0.9,
+      metalness: 0.1,
+      emissive: 0xaa0000, 
+      emissiveIntensity: 0.3
+    });
+  } else if (type === 'burning_charcoal') {
+    // Levels 11-15: Actively burning charcoal - bright edges
+    mat = new THREE.MeshStandardMaterial({ 
+      color: 0x3a2a2a,
+      roughness: 0.8,
+      metalness: 0.1,
+      emissive: 0xff4400, 
+      emissiveIntensity: 1.0
+    });
+  } else if (type === 'obsidian') {
+    // Levels 16-20: Dark volcanic glass with purple glow
+    mat = new THREE.MeshStandardMaterial({ 
+      color: 0x1a1a2a,
+      roughness: 0.1,
+      metalness: 0.8,
+      emissive: 0x6600aa, 
+      emissiveIntensity: 0.6
+    });
+  } else if (type === 'lava_rock') {
+    // Levels 21-30: Porous lava rock - orange glow
+    mat = new THREE.MeshStandardMaterial({ 
+      color: 0x5a2a1a,
+      roughness: 1.0,
+      metalness: 0.0,
+      emissive: 0xff5500, 
+      emissiveIntensity: 0.8
+    });
+  } else if (type === 'crystal') {
+    // Levels 31-40: Volcanic crystals - bright magenta
+    mat = new THREE.MeshStandardMaterial({ 
+      color: 0xff44ff,
+      roughness: 0.1,
+      metalness: 0.9,
+      emissive: 0xff00cc, 
+      emissiveIntensity: 0.9
+    });
+  } else if (type === 'ash') {
+    // Levels 41-50: Compressed ash
+    mat = new THREE.MeshStandardMaterial({ 
+      color: 0x4a4a4a,
+      roughness: 0.95,
+      metalness: 0.0,
+      emissive: 0x882200, 
+      emissiveIntensity: 0.4
+    });
+  } else if (type === 'magma_core') {
+    // Levels 51+: Exposed magma core - extremely bright
+    mat = new THREE.MeshStandardMaterial({ 
+      color: 0xff3300,
+      roughness: 0.2,
+      metalness: 0.6,
+      emissive: 0xff7700, 
+      emissiveIntensity: 1.5
+    });
+  } else if (type === 'golden') {
+    mat = new THREE.MeshStandardMaterial({ 
+      color: 0xffd700,
+      roughness: 0.2,
+      metalness: 0.8,
+      emissive: 0xffaa00, 
+      emissiveIntensity: 0.8
+    });
+  }
+  
+  // ROUNDED BUTTER GEOMETRY - Use different shapes for butter types
+  let geo;
+  if (type === 'butter' || type === 'melting_butter') {
+    // ROUNDED BLOB SHAPE for butter - like a melted drop!
+    // Use sphere squashed into pancake shape with rounded edges
+    geo = new THREE.SphereGeometry(0.7, 16, 8); // Rounded sphere
+    // Will be squashed via scale to look like melted butter blob
+  } else {
+    // Regular box for other platform types
+    geo = new THREE.BoxGeometry(1.2, 0.25, 1.2, 4, 4, 4);
+  }
+  
+  const p = new THREE.Mesh(geo, mat);
+  
+  // Scale butter to be flat blob
+  if (type === 'butter' || type === 'melting_butter') {
+    p.scale.set(1.7, 0.35, 1.7); // Wide and flat = melted butter blob!
+  }
+  
+  p.castShadow = true;
+  p.receiveShadow = true;
+  p.position.copy(position);
+  p.userData = { 
+    destroyed: false, 
+    moving: false, 
+    type: type, 
+    baseColor: mat.color.clone(),
+    scored: false,
+    baseY: position.y,
+    heatLevel: 0,
+    dripTimer: Math.random() * 2 // Random drip timing
+  };
+  scene.add(p);
+  return p;
+}
+
+function getPlatformTypeForLevel(lvl) {
+  if (lvl === 1) return 'butter';
+  if (lvl >= 2 && lvl <= 5) return 'melting_butter';
+  if (lvl >= 6 && lvl <= 10) return 'charcoal';
+  if (lvl >= 11 && lvl <= 15) return 'burning_charcoal';
+  if (lvl >= 16 && lvl <= 20) return 'obsidian';
+  if (lvl >= 21 && lvl <= 30) return 'lava_rock';
+  if (lvl >= 31 && lvl <= 40) return 'crystal';
+  if (lvl >= 41 && lvl <= 50) return 'ash';
+  // Level 51+: Cycles through increasingly dangerous combinations
+  const cycleLevel = (lvl - 51) % 40;
+  if (cycleLevel < 10) return 'magma_core';
+  if (cycleLevel < 20) return 'burning_charcoal';
+  if (cycleLevel < 30) return 'obsidian';
+  return 'lava_rock';
+}
+
+function spawnPlatforms() {
+  // Initialize spiral angle
+  if (!window.spiralAngle) window.spiralAngle = 0;
+  
+  // Start platform aligned with spiral (radius 3, angle 0)
+  const startPos = new THREE.Vector3(3, 0.5, 0); // On the spiral at angle 0
+  const startPlatform = createPlatform('butter', startPos);
+  platforms.push(startPlatform);
+  highestPlatformY = 0.5;
+  
+  // Set as current platform so auto-run can begin
+  currentPlatform = startPlatform;
+  
+  // Position player on starting platform
+  player.position.set(3, 1, 0);
+  
+  // Generate initial platforms ahead
+  generatePlatformsAhead();
+}
+
+function generatePlatformsAhead() {
+  // Spawn platforms from current highest up to SPAWN_AHEAD_DISTANCE ahead of player
+  const targetY = highestPlayerY + SPAWN_AHEAD_DISTANCE;
+  
+  // SPIRAL STAIRCASE - consistent upward spiral
+  const verticalSpacing = 0.4; // Consistent step height
+  const spiralRadius = 3.0; // Fixed radius from center
+  const anglePerStep = Math.PI / 6; // 30 degrees per step (12 steps per full rotation)
+  
+  // Track current angle in the spiral
+  if (!window.spiralAngle) window.spiralAngle = 0;
+  
+  // Get platform type based on current level
+  const levelType = getPlatformTypeForLevel(level);
+  
+  while (highestPlatformY < targetY) {
+    // Use level-based platform types for progressive difficulty
+    let type = levelType;
+    
+    // Add occasional golden platforms for bonus points (10% chance at level 3+)
+    if (level >= 3 && Math.random() < 0.1) {
+      type = 'golden';
+    }
+    
+    // Calculate spiral position
+    const yPos = highestPlatformY + verticalSpacing;
+    const x = Math.cos(window.spiralAngle) * spiralRadius;
+    const z = Math.sin(window.spiralAngle) * spiralRadius;
+    
+    const pos = new THREE.Vector3(x, yPos, z);
+    
+    const p = createPlatform(type, pos);
+    p.userData.platformIndex = platforms.length;
+    platforms.push(p);
+    
+    // Advance spiral
+    window.spiralAngle += anglePerStep;
+    highestPlatformY = yPos;
+  }
+  
+  // INFINITE PROGRESSIVE DIFFICULTY - Lava rises faster each level
+  let speedMultiplier;
+  if (level <= 2) {
+    speedMultiplier = 1.0; // Normal speed
+  } else if (level <= 5) {
+    speedMultiplier = 1.5; // 50% faster
+  } else if (level <= 10) {
+    speedMultiplier = 2.0; // 2x faster
+  } else if (level <= 15) {
+    speedMultiplier = 2.5; // 2.5x faster
+  } else if (level <= 20) {
+    speedMultiplier = 3.0; // 3x faster
+  } else if (level <= 30) {
+    speedMultiplier = 3.5; // 3.5x faster
+  } else if (level <= 40) {
+    speedMultiplier = 4.0; // 4x faster
+  } else if (level <= 50) {
+    speedMultiplier = 4.5; // 4.5x faster
+  } else {
+    // Level 51+: Continues increasing! Becomes insanely hard
+    speedMultiplier = 4.5 + ((level - 50) * 0.1); // +10% per level beyond 50
+    speedMultiplier = Math.min(speedMultiplier, 10.0); // Cap at 10x for playability
+  }
+  
+  currentLavaSpeed = LAVA_RISE_SPEED * speedMultiplier;
+}
+
+function cleanupOldPlatforms() {
+  // Remove platforms that are far below the player
+  for (let i = platforms.length - 1; i >= 0; i--) {
+    const p = platforms[i];
+    if (p.position.y < player.position.y - PLATFORM_CLEANUP_DISTANCE) {
+      scene.remove(p);
+      platforms.splice(i, 1);
+    }
+  }
+}
+
+// ===== INPUT =====
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+
+// Auto-run variables
+let running = false;
+let runSpeed = 1.0; // Base run speed multiplier
+let boosting = false;
+let lastBurstTime = 0; // Cooldown timer
+const BURST_COOLDOWN = 300; // 300ms between bursts
+
+canvas.addEventListener("pointerdown", e => {
+  e.preventDefault();
+  ensureAudio();
+  if (failed) { reset(); return; }
+  
+  // Start running when pressed
+  running = true;
+  beep(440, 0.06);
+  vibrate(20);
+  log("🏃 Running!", "ok");
+}, { passive: false });
+
+// Stop running when released
+canvas.addEventListener("pointerup", e => {
+  running = false;
+  log("⏸️ Stopped", "ok");
+}, { passive: false });
+
+// ===== DEATH ANIMATION =====
+function createFriesExplosion() {
+  const posX = player.position.x;
+  const posY = lavaY + 0.5; // Explode at lava surface
+  const posZ = player.position.z;
+  
+  // HUGE explosion of fries!
+  for (let i = 0; i < 50; i++) {
+    const fry = new THREE.Mesh(
+      new THREE.BoxGeometry(0.05, 0.3, 0.05),
+      new THREE.MeshStandardMaterial({ 
+        color: 0xf4d03f,
+        roughness: 0.6,
+        metalness: 0.2,
+        emissive: 0xc4a020, 
+        emissiveIntensity: 0.8
+      })
+    );
+    fry.position.set(posX, posY, posZ);
+    fry.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+    fry.castShadow = true;
+    
+    // Explosive radial burst
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1.0 + Math.random() * 2.0;
+    const upSpeed = 1.5 + Math.random() * 2.5;
+    
+    fry.userData = {
+      vx: Math.cos(angle) * speed,
+      vy: upSpeed,
+      vz: Math.sin(angle) * speed,
+      rotVx: (Math.random() - 0.5) * 0.8,
+      rotVy: (Math.random() - 0.5) * 0.8,
+      rotVz: (Math.random() - 0.5) * 0.8,
+      life: 0,
+      maxLife: 3.0,
+      isFry: true
+    };
+    scene.add(fry);
+    friesParticles.push(fry);
+  }
+  
+  // Massive steam cloud
+  for (let i = 0; i < 30; i++) {
+    emitSteam({x: posX, y: posY, z: posZ}, 3);
+  }
+  
+  // DRAMATIC explosion sounds - bass rumble + high sizzle
+  beep(80, 0.6);  // Deep bass rumble
+  setTimeout(() => beep(150, 0.5), 100);
+  setTimeout(() => beep(250, 0.4), 200);
+  setTimeout(() => beep(400, 0.3), 300);
+  setTimeout(() => beep(600, 0.2), 400); // High sizzle
+  
+  // Intense haptic pattern
+  vibrate([200, 50, 200, 50, 400]);
+  
+  log("💥 EXPLODED INTO FRIES!", "no");
+}
+
+function triggerFail(reason = "🔥 Getting crispy!") {
+  if (failed) return;
+  failed = true;
+  deathAnimationTimer = DEATH_ANIMATION_DURATION;
+  screenShake = 1.5; // Intense screen shake on death
+  
+  if (score > bestScore || (score === bestScore && level > bestLevel)) {
+    bestScore = score;
+    bestLevel = level;
+    bestEl.textContent = `${bestScore} (L${bestLevel})`;
+    log(`🏆 NEW BEST: ${bestScore} pts at Level ${bestLevel}!`, "ok");
+  }
+  beep(200, 0.2);
+  vibrate(100);
+  log(reason, "no");
+  log(`💀 Final: ${score} pts, Level ${level}`, "no");
+}
+
+function triggerLevelComplete(levelBonus, timeBonus) {
+  levelTransitioning = true;
+  levelTransitionTimer = LEVEL_TRANSITION_DURATION;
+  
+  // Show overlay
+  const overlay = document.getElementById('level-transition');
+  const completeText = document.getElementById('level-complete-text');
+  const levelStats = document.getElementById('level-stats');
+  const nextLevelText = document.getElementById('next-level-text');
+  const difficultyChanges = document.getElementById('difficulty-changes');
+  
+  if (overlay) {
+    overlay.style.display = 'flex';
+    
+    // Update stats
+    document.getElementById('completed-level').textContent = level;
+    document.getElementById('level-bonus').textContent = levelBonus;
+    document.getElementById('time-bonus').textContent = timeBonus;
+    document.getElementById('total-earned').textContent = levelBonus + timeBonus;
+    document.getElementById('next-level').textContent = level + 1;
+    
+    // Calculate and show difficulty changes based on next level
+    let newTimeLimit;
+    if (level + 1 <= 5) {
+      newTimeLimit = 15; // 15 seconds for levels 1-5
+    } else {
+      newTimeLimit = 10.5; // 10.5 seconds for level 6+
+    }
+    
+    // Calculate actual lava speed for next level
+    let nextLavaSpeed;
+    if (level + 1 <= 2) {
+      nextLavaSpeed = 100;
+    } else {
+      nextLavaSpeed = Math.floor(100 * (1 + (level + 1 - 2) * LAVA_SPEED_MULTIPLIER_PER_LEVEL));
+    }
+    
+    document.getElementById('new-time').textContent = newTimeLimit.toString();
+    document.getElementById('lava-speed').textContent = `${nextLavaSpeed}%`;
+    
+    // Show new platform type
+    const newType = getPlatformTypeForLevel(level + 1);
+    const typeNames = {
+      'butter': '🧈 Butter Platforms',
+      'melting_butter': '💧 Melting Butter',
+      'charcoal': '⚫ Charcoal Platforms',
+      'burning_charcoal': '🔥 Burning Charcoal',
+      'obsidian': '💎 Obsidian Glass',
+      'lava_rock': '🌋 Lava Rock',
+      'crystal': '✨ Volcanic Crystals',
+      'ash': '💨 Compressed Ash',
+      'magma_core': '☄️ MAGMA CORE'
+    };
+    document.getElementById('platform-type-display').textContent = typeNames[newType] || '🎮 New Platforms!';
+    
+    let dangerText = "Moderate";
+    if (level >= 10) dangerText = "EXTREME";
+    else if (level >= 6) dangerText = "High";
+    else if (level >= 3) dangerText = "Rising";
+    document.getElementById('danger-level').textContent = dangerText;
+    
+    // Animate elements in sequence
+    setTimeout(() => {
+      if (completeText) completeText.style.transform = 'scale(1)';
+    }, 100);
+    
+    setTimeout(() => {
+      if (levelStats) levelStats.style.opacity = '1';
+    }, 600);
+    
+    setTimeout(() => {
+      if (nextLevelText) nextLevelText.style.opacity = '1';
+    }, 1300);
+    
+    setTimeout(() => {
+      if (difficultyChanges) difficultyChanges.style.opacity = '1';
+    }, 1800);
+  }
+  
+  // Sound effects
+  beep(880, 0.2);
+  setTimeout(() => beep(1100, 0.2), 200);
+  setTimeout(() => beep(1320, 0.3), 400);
+  vibrate([100, 50, 100, 50, 200]);
+}
+
+function hideLevelTransition() {
+  const overlay = document.getElementById('level-transition');
+  const completeText = document.getElementById('level-complete-text');
+  const levelStats = document.getElementById('level-stats');
+  const nextLevelText = document.getElementById('next-level-text');
+  const difficultyChanges = document.getElementById('difficulty-changes');
+  
+  if (overlay) overlay.style.display = 'none';
+  if (completeText) completeText.style.transform = 'scale(0)';
+  if (levelStats) levelStats.style.opacity = '0';
+  if (nextLevelText) nextLevelText.style.opacity = '0';
+  if (difficultyChanges) difficultyChanges.style.opacity = '0';
+}
+
+// ===== RESET =====
+function reset() {
+  failed = false;
+  deathAnimationTimer = 0;
+  friesExploded = false;
+  screenShake = 0;
+  levelTransitioning = false;
+  levelTransitionTimer = 0;
+  hideLevelTransition();
+  
+  // Reset running variables
+  running = false;
+  runSpeed = 1.0;
+  boosting = false;
+  window.spiralAngle = 0; // Reset spiral position
+  
+  // Clear fire particles
+  friesParticles.forEach(f => scene.remove(f));
+  friesParticles.length = 0;
+  
+  steamParticles.forEach(s => scene.remove(s));
+  steamParticles.length = 0;
+  bubbleParticles.forEach(b => scene.remove(b));
+  bubbleParticles.length = 0;
+  
+  // Clear all platforms
+  platforms.forEach(p => scene.remove(p));
+  platforms.length = 0;
+  highestPlatformY = 0;
+  
+  // Clear fire pods
+  firePods.forEach(p => scene.remove(p));
+  firePods.length = 0;
+  
+  player.visible = true;
+  player.scale.set(1, 1, 1);
+  player.rotation.set(0, 0, 0);
+  player.position.set(3, 1, 0); // Match spiral start position
+  player.userData.vx = 0;
+  player.userData.vz = 0;
+  if (player.userData.body) {
+    player.userData.body.material.color.setHex(0xd4a574);
+    player.userData.body.material.emissiveIntensity = 0.05;
+  }
+  vy = 0;
+  jumping = false;
+  sizzle = 0;
+  currentPlatform = null;
+  score = 0;
+  jumps = 0;
+  level = 1;
+  platformsCleared = 0;
+  comboCount = 0;
+  scoreMultiplier = 1;
+  lastLandTime = Date.now();
+  levelStartTime = Date.now();
+  levelTimeLimit = BASE_TIME_EARLY; // Start with 15 seconds
+  timerWarningShown = false;
+  highestPlayerY = 1;
+  lavaY = -1.5;
+  lava.position.y = lavaY;
+  highestPlatformY = 0;
+  nextLevelThreshold = 5;
+  currentLavaSpeed = LAVA_RISE_SPEED;
+  cameraRotation = 0;
+  autoRotate = true;
+  rotateLeft = false;
+  rotateRight = false;
+  camera.position.set(0, 4, 8);
+  camera.lookAt(0, 1, 0);
+  spawnPlatforms();
+  updateUI();
+  log("🥔 Mr. Potato Head ready!", "ok");
+  log("⚠️ Don't become french fries!");
+}
+
+// ===== PARTICLES =====
+function emitSteam(pos, count = 5) {
+  for (let i = 0; i < count; i++) {
+    const steam = new THREE.Mesh(new THREE.SphereGeometry(0.04 + Math.random() * 0.04, 8, 8), steamMat.clone());
+    steam.position.set(
+      pos.x + (Math.random() - 0.5) * 0.2,
+      pos.y + Math.random() * 0.15,
+      pos.z + (Math.random() - 0.5) * 0.2
+    );
+    steam.userData = {
+      vy: 0.02 + Math.random() * 0.02,
+      life: Math.random() * 0.6 + 0.4,
+      scale: 1,
+      maxLife: Math.random() * 0.6 + 0.4
+    };
+    steam.material.opacity = 0.3;
+    scene.add(steam);
+    steamParticles.push(steam);
+  }
+}
+
+function emitSteamTrail(count = 5) {
+  // Will be called during jump in update loop
+}
+
+function updateSteamParticles(dt) {
+  for (let i = steamParticles.length - 1; i >= 0; i--) {
+    const s = steamParticles[i];
+    s.userData.life -= dt;
+    s.position.y += s.userData.vy * dt;
+    
+    // Expand slightly
+    s.userData.scale *= 1.015;
+    s.scale.setScalar(s.userData.scale);
+    
+    // Fade quickly - rapid opacity decay
+    const lifeRatio = s.userData.life / s.userData.maxLife;
+    s.material.opacity = 0.3 * lifeRatio * lifeRatio;
+    
+    if (s.userData.life <= 0 || s.material.opacity < 0.01) {
+      scene.remove(s);
+      steamParticles.splice(i, 1);
+    }
+  }
+}
+
+// BUTTER DRIP PARTICLES - Dripping from platforms!
+function emitButterDrip(platformPos) {
+  const dripGeo = new THREE.SphereGeometry(0.08, 8, 8); // Small droplet
+  const dripMat = new THREE.MeshStandardMaterial({
+    color: 0xFFD700,
+    emissive: 0xFFA500,
+    emissiveIntensity: 0.6,
+    transparent: true,
+    opacity: 0.9,
+    metalness: 0.3,
+    roughness: 0.4
+  });
+  
+  const drip = new THREE.Mesh(dripGeo, dripMat);
+  
+  // Start from random edge of platform
+  const angle = Math.random() * Math.PI * 2;
+  const radius = 0.5 + Math.random() * 0.3;
+  drip.position.set(
+    platformPos.x + Math.cos(angle) * radius,
+    platformPos.y - 0.15, // Bottom of platform
+    platformPos.z + Math.sin(angle) * radius
+  );
+  
+  drip.userData = {
+    vy: -0.02 - Math.random() * 0.02, // Fall speed
+    life: 2.0, // 2 seconds lifespan
+    maxLife: 2.0
+  };
+  
+  scene.add(drip);
+  butterDrips.push(drip);
+}
+
+function updateButterDrips(dt) {
+  for (let i = butterDrips.length - 1; i >= 0; i--) {
+    const drip = butterDrips[i];
+    drip.userData.life -= dt;
+    
+    // Fall down
+    drip.position.y += drip.userData.vy;
+    drip.userData.vy -= 0.001; // Gravity
+    
+    // Stretch as it falls (teardrop shape)
+    drip.scale.y = 1 + Math.abs(drip.userData.vy) * 5;
+    drip.scale.x = 1 - Math.abs(drip.userData.vy) * 2;
+    drip.scale.z = 1 - Math.abs(drip.userData.vy) * 2;
+    
+    // Fade out
+    const lifeRatio = drip.userData.life / drip.userData.maxLife;
+    drip.material.opacity = 0.9 * lifeRatio;
+    
+    // Remove when dead or hits lava
+    if (drip.userData.life <= 0 || drip.position.y < lavaY + 0.5) {
+      scene.remove(drip);
+      butterDrips.splice(i, 1);
+    }
+  }
+}
+
+function emitBubbles() {
+  if (Math.random() < 0.3) {
+    for (let i = 0; i < 3; i++) {
+      const bubble = new THREE.Mesh(new THREE.SphereGeometry(0.1 + Math.random() * 0.2, 8, 8), bubbleMat);
+      bubble.position.set(
+        (Math.random() - 0.5) * 20,
+        lavaY + Math.random() * 0.5,
+        (Math.random() - 0.5) * 20
+      );
+      bubble.userData = {
+        vy: 0.1 + Math.random() * 0.1,
+        life: Math.random() * 3 + 2,
+        wobble: Math.random() * Math.PI * 2
+      };
+      scene.add(bubble);
+      bubbleParticles.push(bubble);
+    }
+  }
+}
+
+function updateBubbleParticles(dt, time) {
+  for (let i = bubbleParticles.length - 1; i >= 0; i--) {
+    const b = bubbleParticles[i];
+    b.userData.life -= dt;
+    b.position.y += b.userData.vy * dt;
+    b.position.x += Math.sin(time * 5 + b.userData.wobble) * 0.01;
+    b.position.z += Math.cos(time * 5 + b.userData.wobble) * 0.01;
+    b.scale.multiplyScalar(1.01);
+    b.material.opacity *= 0.98;
+    if (b.userData.life <= 0 || b.material.opacity < 0.01 || b.position.y > lavaY + 5) {
+      scene.remove(b);
+      bubbleParticles.splice(i, 1);
+    }
+  }
+}
+
+// ===== COMBO POPUP =====
+let comboPopupTimeout = null;
+function showComboPopup(combo) {
+  const popup = document.getElementById('combo-popup');
+  const text = document.getElementById('combo-text');
+  
+  if (!popup || !text) return;
+  
+  // Clear any existing timeout
+  if (comboPopupTimeout) {
+    clearTimeout(comboPopupTimeout);
+  }
+  
+  // Update text
+  text.textContent = `COMBO x${combo}!`;
+  
+  // Animate in
+  popup.style.transform = 'translate(-50%, -50%) scale(1)';
+  popup.style.opacity = '1';
+  
+  // Pulse effect
+  setTimeout(() => {
+    popup.style.transform = 'translate(-50%, -50%) scale(1.2)';
+  }, 100);
+  
+  setTimeout(() => {
+    popup.style.transform = 'translate(-50%, -50%) scale(1)';
+  }, 200);
+  
+  // Animate out
+  comboPopupTimeout = setTimeout(() => {
+    popup.style.transform = 'translate(-50%, -50%) scale(0)';
+    popup.style.opacity = '0';
+  }, 800);
+}
+
+// ===== UPDATE LOOP =====
+function update() {
+  requestAnimationFrame(update);
+  const dt = 0.016;
+  const time = performance.now() * 0.001;
+
+  lavaMat.emissiveIntensity = 1.2 + Math.sin(time * 3) * 0.3;
+
+  // Animate lava surface - aggressive bubbling with darker colors
+  const lavaGeo = lava.geometry;
+  const lavaPositions = lavaGeo.attributes.position;
+  const lavaColors = lavaGeo.attributes.color;
+  
+  for (let i = 0; i < lavaPositions.count; i++) {
+    const x = lavaPositions.getX(i);
+    const y = lavaPositions.getY(i);
+    
+    // Multiple wave layers for chaotic boiling
+    const wave1 = Math.sin(x * 0.4 + time * 3) * Math.cos(y * 0.4 + time * 2.5) * 0.25;
+    const wave2 = Math.sin(x * 0.6 - time * 2) * Math.cos(y * 0.5 + time * 1.8) * 0.18;
+    const wave3 = Math.sin(x * 0.3 + time * 4) * Math.cos(y * 0.3 - time * 3.2) * 0.12;
+    const bubble = Math.sin(x * 1.5 + time * 6) * Math.cos(y * 1.5 + time * 5) * 0.08;
+    
+    lavaPositions.setZ(i, wave1 + wave2 + wave3 + bubble);
+    
+    // Animate colors - DARKER for better contrast with platforms
+    const colorWave = Math.sin(x * 0.5 + time * 2) * Math.cos(y * 0.5 - time * 1.5);
+    if (colorWave > 0.7) {
+      // Hot orange spots (not yellow)
+      lavaColors.setX(i, 1.0);
+      lavaColors.setY(i, 0.4);
+      lavaColors.setZ(i, 0.0);
+    } else if (colorWave < -0.5) {
+      // Very dark crust
+      lavaColors.setX(i, 0.15);
+      lavaColors.setY(i, 0.02);
+      lavaColors.setZ(i, 0.0);
+    } else {
+      // Deep red-orange base
+      lavaColors.setX(i, 0.7);
+      lavaColors.setY(i, 0.15 + colorWave * 0.1);
+      lavaColors.setZ(i, 0.0);
+    }
+  }
+  
+  lavaGeo.attributes.position.needsUpdate = true;
+  lavaGeo.attributes.color.needsUpdate = true;
+  lavaGeo.computeVertexNormals();
+
+  // Update fire pods
+  updateFirePods(time);
+
+  // Animate floating debris (embers, skins, fries)
+  if (ashParticles) {
+    ashParticles.children.forEach((debris, i) => {
+      debris.position.y -= debris.userData.speed;
+      debris.position.x += Math.sin(time + debris.userData.drift) * 0.01;
+      debris.position.z += Math.cos(time + debris.userData.drift) * 0.01;
+      
+      // Rotate debris for realism
+      if (debris.userData.rotSpeed) {
+        debris.rotation.x += debris.userData.rotSpeed;
+        debris.rotation.y += debris.userData.rotSpeed * 0.7;
+      }
+      
+      // Pulse glowing embers
+      if (debris.userData.glow && debris.material.emissiveIntensity !== undefined) {
+        debris.material.emissiveIntensity = 1.5 + Math.sin(time * 4 + i) * 0.5;
+      }
+      
+      // Reset to top when reaching bottom
+      if (debris.position.y < lavaY + 2) {
+        debris.position.y = 100;
+        debris.position.x = (Math.random() - 0.5) * 20;
+        debris.position.z = (Math.random() - 0.5) * 20;
+      }
+    });
+  }
+
+  // Animate golden platforms
+  for (const p of platforms) {
+    // BUTTER BLOCKS - MELTING DRIPPING EFFECT!
+    if (p.userData.type === 'butter') {
+      // DRIPPING EFFECT - sides melt down
+      if (!p.userData.baseY) p.userData.baseY = p.position.y;
+      
+      // Pulsing golden glow
+      p.material.emissiveIntensity = 0.8 + Math.sin(time * 3 + p.userData.platformIndex * 0.3) * 0.4;
+      
+      // MELTING - squash and stretch effect
+      const meltPhase = time * 2 + p.userData.platformIndex * 0.5;
+      p.scale.y = 0.9 + Math.sin(meltPhase) * 0.15; // Squishes vertically
+      p.scale.x = 1.05 - Math.sin(meltPhase) * 0.05; // Expands horizontally when squished
+      p.scale.z = 1.05 - Math.sin(meltPhase) * 0.05;
+      
+      // Gentle floating bob + drip downward motion
+      const bob = Math.sin(time * 1.5 + p.userData.platformIndex * 0.5) * 0.05;
+      const drip = Math.sin(time * 0.8 + p.userData.platformIndex) * 0.03; // Slow drip down
+      p.position.y = p.userData.baseY + bob - Math.abs(drip);
+      
+      // Wobble rotation - looks like liquid sloshing
+      p.rotation.y += 0.01;
+      p.rotation.x = Math.sin(time * 1.2 + p.userData.platformIndex) * 0.05;
+      p.rotation.z = Math.cos(time * 1.3 + p.userData.platformIndex * 0.7) * 0.05;
+      
+      // Change color slightly - warmer when "melting" more
+      const heatFactor = (Math.sin(meltPhase) + 1) * 0.5;
+      const warmColor = 0xFFD700 + Math.floor(heatFactor * 0x000A00); // Slightly more orange when hot
+      p.material.color.setHex(warmColor);
+      
+      // EMIT DRIPPING BUTTER DROPS!
+      p.userData.dripTimer -= dt;
+      if (p.userData.dripTimer <= 0) {
+        emitButterDrip(p.position);
+        p.userData.dripTimer = 0.3 + Math.random() * 0.5; // Drip every 0.3-0.8 seconds
+      }
+    }
+    
+    if (p.userData.type === 'golden' && p.userData.baseY !== undefined) {
+      p.position.y = p.userData.baseY + Math.sin(time * 2 + (p.userData.platformIndex || 0)) * 0.1;
+      p.rotation.y = time * 0.5;
+    }
+    
+    // Melting butter platforms - EXTRA drip effect
+    if (p.userData.type === 'melting_butter') {
+      // Even MORE melting than regular butter
+      const meltPhase = time * 3 + p.userData.platformIndex;
+      p.scale.y = 0.85 + Math.sin(meltPhase) * 0.2; // More dramatic squish
+      p.scale.x = 1.1 - Math.sin(meltPhase) * 0.1;
+      p.scale.z = 1.1 - Math.sin(meltPhase) * 0.1;
+      p.material.emissiveIntensity = 0.5 + Math.sin(time * 4) * 0.3;
+      
+      // Dripping down motion
+      if (!p.userData.baseY) p.userData.baseY = p.position.y;
+      p.position.y = p.userData.baseY - Math.abs(Math.sin(time * 0.6 + p.userData.platformIndex)) * 0.08;
+      
+      // EXTRA DRIPS for melting butter!
+      p.userData.dripTimer -= dt;
+      if (p.userData.dripTimer <= 0) {
+        emitButterDrip(p.position);
+        emitButterDrip(p.position); // Double drips!
+        p.userData.dripTimer = 0.2 + Math.random() * 0.3; // Faster drips
+      }
+    }
+    
+    // Burning charcoal - pulsing glow
+    if (p.userData.type === 'burning_charcoal') {
+      p.material.emissiveIntensity = 0.8 + Math.sin(time * 6 + p.userData.platformIndex) * 0.3;
+      // Occasional sparks
+      if (Math.random() < 0.02) {
+        emitSteam(p.position, 1);
+      }
+    }
+    
+    // Obsidian - subtle shimmer
+    if (p.userData.type === 'obsidian') {
+      p.rotation.y += 0.005;
+      p.material.emissiveIntensity = 0.4 + Math.sin(time * 2) * 0.1;
+    }
+    
+    // Lava rock - heat waves
+    if (p.userData.type === 'lava_rock') {
+      p.material.emissiveIntensity = 0.6 + Math.sin(time * 5 + p.userData.platformIndex) * 0.3;
+      p.position.y = p.userData.baseY + Math.sin(time * 1.5) * 0.05;
+    }
+    
+    // Crystal - rainbow shimmer
+    if (p.userData.type === 'crystal') {
+      const hue = (time * 50 + p.userData.platformIndex * 30) % 360;
+      p.material.emissive.setHSL(hue / 360, 1.0, 0.5);
+      p.rotation.y = time * 0.8;
+    }
+    
+    // Magma core - extreme heat and danger
+    if (p.userData.type === 'magma_core') {
+      p.material.emissiveIntensity = 1.2 + Math.sin(time * 8) * 0.4;
+      p.scale.set(
+        1 + Math.sin(time * 4) * 0.05,
+        1 + Math.sin(time * 5) * 0.05,
+        1 + Math.sin(time * 4) * 0.05
+      );
+      // Constant steam/smoke
+      if (Math.random() < 0.1) {
+        emitSteam(p.position, 2);
+      }
+    }
+  }
+
+  for (let i = friesParticles.length - 1; i >= 0; i--) {
+    const f = friesParticles[i];
+    
+    // Handle fries from explosion
+    if (f.userData.isFry) {
+      f.userData.life += dt;
+      f.userData.vy -= 0.02 * dt;
+      f.position.x += f.userData.vx * dt;
+      f.position.y += f.userData.vy * dt;
+      f.position.z += f.userData.vz * dt;
+      f.rotation.x += f.userData.rotVx * dt;
+      f.rotation.y += f.userData.rotVy * dt;
+      f.rotation.z += f.userData.rotVz * dt;
+      
+      // Fries gradually darken and burn as they fall
+      const distToLava = f.position.y - lavaY;
+      if (distToLava < 2.0 && distToLava > 0) {
+        const heatFactor = 1 - (distToLava / 2.0);
+        if (f.material && f.material.color) {
+          const fryColor = new THREE.Color(0xf4d03f);
+          const burntColor = new THREE.Color(0x3a2010);
+          f.material.color.copy(fryColor).lerp(burntColor, heatFactor * 0.7);
+          f.material.emissiveIntensity = 0.8 + heatFactor * 1.0;
+          
+          // Steam when very close
+          if (heatFactor > 0.8 && Math.random() < 0.05) {
+            emitSteam(f.position, 1);
+          }
+        }
+      }
+      
+      // UPDATE BUTTER DRIPS!
+      updateButterDrips(dt);
+      
+      // Remove when hitting lava or too old
+      if (f.userData.life > f.userData.maxLife || f.position.y < lavaY) {
+        if (f.position.y < lavaY) {
+          // Sizzle when hitting lava
+          if (Math.random() < 0.3) {
+            beep(350 + Math.random() * 100, 0.04);
+            emitSteam(f.position, 1);
+          }
+        }
+        scene.remove(f);
+        friesParticles.splice(i, 1);
+      }
+    }
+    // Handle fire pod burst particles
+    else if (f.userData.maxLife) {
+      f.userData.life += dt;
+      f.userData.vy -= 0.02 * dt;
+      f.position.x += f.userData.vx * dt;
+      f.position.y += f.userData.vy * dt;
+      f.position.z += f.userData.vz * dt;
+      
+      // Fade out based on life
+      const lifeRatio = f.userData.life / f.userData.maxLife;
+      if (f.material && f.material.opacity !== undefined) {
+        f.material.opacity = 1 - lifeRatio;
+      }
+      
+      if (f.userData.life > f.userData.maxLife || f.position.y < lavaY) {
+        scene.remove(f);
+        friesParticles.splice(i, 1);
+      }
+    }
+    // Unknown particle type - remove
+    else {
+      scene.remove(f);
+      friesParticles.splice(i, 1);
+    }
+  }
+
+  updateSteamParticles(dt);
+  emitBubbles();
+  updateBubbleParticles(dt, time);
+
+  // Check combo timeout
+  if (comboCount > 0 && !jumping && Date.now() - lastLandTime > COMBO_TIMEOUT) {
+    comboCount = 0;
+    scoreMultiplier = 1;
+    updateUI();
+  }
+
+  // Check level timer
+  if (!failed) {
+    const elapsed = Date.now() - levelStartTime;
+    const remaining = levelTimeLimit - elapsed;
+    
+    // Warning at 10 seconds
+    if (remaining < 10000 && remaining > 9000 && !timerWarningShown) {
+      timerWarningShown = true;
+      beep(800, 0.1);
+      vibrate(50);
+      log("⏰ 10 seconds left!", "no");
+    }
+    
+    // Time's up!
+    if (remaining <= 0) {
+      triggerFail("⏰ Time's up!");
+    }
+    
+    updateUI();
+  }
+
+  // Update player spotlight position
+  if (playerSpotlight && playerSpotlight.target) {
+    playerSpotlight.position.set(player.position.x, player.position.y + 8, player.position.z);
+    playerSpotlight.target.position.copy(player.position);
+    playerSpotlight.target.updateMatrixWorld();
+  }
+
+  // Handle level transition
+  if (levelTransitioning) {
+    levelTransitionTimer -= dt;
+    
+    // Screen shake effect during first 0.5 seconds
+    if (levelTransitionTimer > LEVEL_TRANSITION_DURATION - 0.5) {
+      const shakeIntensity = 0.3;
+      camera.position.x += (Math.random() - 0.5) * shakeIntensity;
+      camera.position.y += (Math.random() - 0.5) * shakeIntensity;
+      camera.position.z += (Math.random() - 0.5) * shakeIntensity;
+    }
+    
+    if (levelTransitionTimer <= 0) {
+      levelTransitioning = false;
+      hideLevelTransition();
+    }
+    // Pause gameplay during transition - skip the rest of update
+    renderer.render(scene, camera);
+    return;
+  }
+
+  if (!failed) {
+    lavaY += currentLavaSpeed;
+    lava.position.y = lavaY;
+    lavaGlow.position.y = lavaY;
+
+    // Facial expressions and arm animations
+    if (jumping && player.userData.leftArm && player.userData.rightArm) {
+      // Jumping - excited arm flailing
+      player.userData.leftArm.rotation.z = Math.PI / 6 + Math.sin(time * 10) * 0.4;
+      player.userData.rightArm.rotation.z = -Math.PI / 6 - Math.sin(time * 10) * 0.4;
+      
+      // SCARED FACE while jumping
+      if (player.userData.mouth) {
+        // Open mouth in O shape (scared)
+        const openAmount = 0.1 + Math.abs(Math.sin(time * 8)) * 0.05;
+        player.userData.mouth.scale.y = 1.2 + openAmount;
+        player.userData.mouth.position.y = 0.05 - openAmount * 0.5;
+      }
+      
+      // Wide eyes (scared)
+      if (player.userData.leftEyeWhite && player.userData.rightEyeWhite) {
+        player.userData.leftEyeWhite.scale.set(1.2, 1.2, 0.4);
+        player.userData.rightEyeWhite.scale.set(1.2, 1.2, 0.4);
+      }
+      
+      // Pupils dart around nervously
+      if (player.userData.leftPupil && player.userData.rightPupil) {
+        const pupilOffset = Math.sin(time * 12) * 0.03;
+        player.userData.leftPupil.position.x = -0.15 + pupilOffset;
+        player.userData.rightPupil.position.x = 0.15 + pupilOffset;
+        player.userData.leftPupil.position.y = 0.35 + Math.cos(time * 10) * 0.02;
+        player.userData.rightPupil.position.y = 0.35 + Math.cos(time * 10) * 0.02;
+      }
+    } else if (!jumping && player.userData.leftArm && player.userData.rightArm) {
+      // Idle - gentle swaying
+      player.userData.leftArm.rotation.z = Math.PI / 6 + Math.sin(time * 2) * 0.1;
+      player.userData.rightArm.rotation.z = -Math.PI / 6 - Math.sin(time * 2) * 0.1;
+      
+      // HAPPY FACE when idle/safe
+      if (player.userData.mouth) {
+        // Gentle smile
+        player.userData.mouth.scale.y = 1.0;
+        player.userData.mouth.position.y = 0.05;
+      }
+      
+      // Normal eyes
+      if (player.userData.leftEyeWhite && player.userData.rightEyeWhite) {
+        player.userData.leftEyeWhite.scale.set(1, 1, 0.4);
+        player.userData.rightEyeWhite.scale.set(1, 1, 0.4);
+      }
+      
+      // Pupils look forward, slight blink
+      if (player.userData.leftPupil && player.userData.rightPupil) {
+        player.userData.leftPupil.position.set(-0.15, 0.35, 0.35);
+        player.userData.rightPupil.position.set(0.15, 0.35, 0.35);
+        
+        // Occasional blink
+        const blinkCycle = Math.sin(time * 0.5);
+        if (blinkCycle > 0.97) {
+          const blinkAmount = (blinkCycle - 0.97) / 0.03;
+          player.userData.leftEyeWhite.scale.y = 1 - blinkAmount * 0.8;
+          player.userData.rightEyeWhite.scale.y = 1 - blinkAmount * 0.8;
+        }
+      }
+    }
+    
+    // Extra scared when lava is close!
+    const distanceToLava = player.position.y - lavaY;
+    if (distanceToLava < 3 && player.userData.mouth) {
+      const fearFactor = 1 - (distanceToLava / 3);
+      player.userData.mouth.scale.y = 1.0 + fearFactor * 0.5;
+      
+      // Eyes get wider as lava approaches
+      if (player.userData.leftEyeWhite && player.userData.rightEyeWhite) {
+        player.userData.leftEyeWhite.scale.set(1 + fearFactor * 0.3, 1 + fearFactor * 0.3, 0.4);
+        player.userData.rightEyeWhite.scale.set(1 + fearFactor * 0.3, 1 + fearFactor * 0.3, 0.4);
+      }
+    }
+    
+    // PANIC SOUNDS when lava is dangerously close
+    if (!jumping) { // Only play when standing still
+      if (distanceToLava < 2.5 && distanceToLava > 0.5) {
+        const panicLevel = 1 - (distanceToLava / 2.5);
+        
+        // Heartbeat sound - faster as lava gets closer
+        if (Math.random() < panicLevel * 0.03) {
+          beep(80 + panicLevel * 40, 0.08); // Low thump
+          setTimeout(() => beep(80 + panicLevel * 40, 0.08), 100);
+        }
+        
+        // Breathing/gasping sounds
+        if (Math.random() < panicLevel * 0.02) {
+          beep(300 + Math.random() * 100, 0.05); // Quick gasp
+        }
+        
+        // Warning beeps when very close
+        if (distanceToLava < 1.5 && Math.random() < panicLevel * 0.05) {
+          beep(800 + Math.random() * 200, 0.04); // High pitched alarm
+          vibrate(30);
+        }
+        
+        // Critical danger - continuous alarm
+        if (distanceToLava < 1.0 && Math.random() < 0.1) {
+          beep(1000, 0.03);
+          vibrate(20);
+        }
+      }
+    }
+
+    // AUTO-RUN - automatically jump to next platform
+    if (running && !jumping) {
+      // Check cooldown - don't burst too fast!
+      const now = Date.now();
+      if (now - lastBurstTime < BURST_COOLDOWN) {
+        return; // Still cooling down, skip this frame
+      }
+      
+      // Find next platform to auto-jump to
+      let nextPlatform = null;
+      let minDist = Infinity;
+      
+      for (const p of platforms) {
+        if (p.userData.destroyed) continue;
+        if (p === currentPlatform) continue;
+        if (p.position.y < player.position.y) continue; // Must be at or above
+        
+        const dx = p.position.x - player.position.x;
+        const dz = p.position.z - player.position.z;
+        const horizontalDist = Math.sqrt(dx * dx + dz * dz);
+        const verticalDist = p.position.y - player.position.y;
+        
+        // Find closest reachable platform
+        if (verticalDist < 1.5 && horizontalDist < 6) {
+          const totalDist = horizontalDist + verticalDist;
+          if (totalDist < minDist) {
+            minDist = totalDist;
+            nextPlatform = p;
+          }
+        }
+      }
+      
+      if (nextPlatform) {
+        // VERY SHORT BURST - almost like running steps
+        jumping = true;
+        jumps++;
+        lastBurstTime = now; // Update cooldown timer
+        
+        const dx = nextPlatform.position.x - player.position.x;
+        const dz = nextPlatform.position.z - player.position.z;
+        player.userData.vx = dx / 10; // 3x faster horizontal!
+        player.userData.vz = dz / 10;
+        
+        // Rotate potato to face jump direction
+        const angle = Math.atan2(dx, dz);
+        player.rotation.y = angle;
+        
+        vy = 0.12; // TINY hop - barely leaves ground
+        beep(520, 0.02); // Quick tap sound
+        jumpsEl.textContent = jumps;
+        mobileJumpsEl.textContent = jumps;
+        emitSteamTrail(1); // Minimal steam
+      }
+    }
+
+    if (jumping) {
+      vy += GRAVITY * dt * 60;
+      player.position.y += vy * dt * 60;
+      player.position.x += (player.userData.vx || 0) * dt * 60;
+      player.position.z += (player.userData.vz || 0) * dt * 60;
+      
+      // MAGNETIC ASSIST - Pull toward nearby platforms when falling
+      if (vy < 0) { // Only when falling
+        let closestPlatform = null;
+        let closestDist = Infinity;
+        
+        // Find closest platform below
+        for (const p of platforms) {
+          if (p.userData.destroyed) continue;
+          if (p.position.y > player.position.y - 0.5) continue; // Must be below
+          
+          const dx = p.position.x - player.position.x;
+          const dz = p.position.z - player.position.z;
+          const dist = Math.sqrt(dx * dx + dz * dz);
+          
+          if (dist < closestDist && dist < 1.5) { // Within magnetic range
+            closestDist = dist;
+            closestPlatform = p;
+          }
+        }
+        
+        // Apply magnetic pull
+        if (closestPlatform) {
+          const pullStrength = 0.015; // Gentle assistance
+          const dx = closestPlatform.position.x - player.position.x;
+          const dz = closestPlatform.position.z - player.position.z;
+          player.userData.vx += dx * pullStrength;
+          player.userData.vz += dz * pullStrength;
+        }
+      }
+
+      // Light steam trail during jump - emit occasionally from slightly behind position
+      if (Math.random() < 0.4) {
+        const trailPos = new THREE.Vector3(
+          player.position.x - (player.userData.vx || 0) * 15,
+          player.position.y - 0.2,
+          player.position.z - (player.userData.vz || 0) * 15
+        );
+        emitSteam(trailPos, 1);
+      }
+    }
+    
+    // Update shadow blob - dynamic size and opacity based on height
+    if (player.userData.shadow) {
+      player.userData.shadow.position.x = player.position.x;
+      player.userData.shadow.position.z = player.position.z;
+      
+      // Find the closest platform below the player for shadow positioning
+      let closestPlatformBelow = null;
+      let minDist = Infinity;
+      for (const p of platforms) {
+        if (p.position.y < player.position.y) {
+          const dist = player.position.y - p.position.y;
+          if (dist < minDist) {
+            minDist = dist;
+            closestPlatformBelow = p;
+          }
+        }
+      }
+      
+      // Position shadow on closest platform or lava
+      const shadowTargetY = closestPlatformBelow ? closestPlatformBelow.position.y + 0.13 : lavaY + 0.02;
+      player.userData.shadow.position.y = shadowTargetY;
+      
+      // Scale and fade shadow based on distance
+      const heightAboveShadow = player.position.y - shadowTargetY;
+      const shadowScale = Math.max(0.3, 1 - heightAboveShadow * 0.15);
+      const shadowOpacity = Math.max(0.15, Math.min(0.5, 1 - heightAboveShadow * 0.1));
+      
+      player.userData.shadow.scale.set(shadowScale, shadowScale, 1);
+      player.userData.shadow.material.opacity = shadowOpacity;
+    }
+
+    currentPlatform = null;
+    for (const p of platforms) {
+      if (p.userData.destroyed) continue;
+      const dx = player.position.x - p.position.x;
+      const dz = player.position.z - p.position.z;
+      const horizontalDist = Math.sqrt(dx * dx + dz * dz);
+      const playerFeetY = player.position.y - 0.5;
+      const platformTopY = p.position.y + 0.125;
+      
+      // MUCH more forgiving landing detection - magnetic assist
+      // Platform is 1.2 units wide, so 0.6 radius is the edge
+      const landingRadius = 0.9; // Very generous (was 0.7)
+      const verticalTolerance = 0.6; // Very forgiving vertical range (was 0.4)
+      
+      if (horizontalDist < landingRadius && playerFeetY >= platformTopY - verticalTolerance && playerFeetY <= platformTopY + verticalTolerance && vy <= 0) {
+        // Snap to platform center for perfect landing
+        player.position.y = platformTopY + 0.5;
+        player.position.x = p.position.x;
+        player.position.z = p.position.z;
+        vy = 0;
+        player.userData.vx = 0;
+        player.userData.vz = 0;
+        jumping = false;
+        currentPlatform = p;
+        lastLandTime = Date.now();
+        
+        // Small screen shake on landing
+        screenShake = 0.15;
+        
+        // Don't score same platform twice
+        if (!p.userData.scored) {
+          p.userData.scored = true;
+          platformsCleared++;
+          
+          // Combo system
+          comboCount++;
+          comboCount = Math.min(comboCount, MAX_COMBO);
+          scoreMultiplier = 1 + (comboCount - 1) * 0.2;
+          
+          // Show combo popup for 2x and higher
+          if (comboCount >= 2) {
+            showComboPopup(comboCount);
+          }
+          
+          // Base score with multiplier
+          let baseScore = 10;
+          
+          // Golden platform bonus!
+          if (p.userData.type === 'golden') {
+            baseScore = 50;
+            beep(1200, 0.15);
+            vibrate([50, 30, 50]);
+            log(`⭐ GOLDEN PLATFORM! +${Math.floor(baseScore * scoreMultiplier * level)} pts!`, "ok");
+          }
+          
+          const earnedScore = Math.floor(baseScore * scoreMultiplier * level);
+          score += earnedScore;
+          
+          // Visual feedback
+          beep(660 + comboCount * 50, 0.05);
+          if (comboCount > 3 && p.userData.type !== 'golden') {
+            log(`+${earnedScore} pts! ${comboCount}x COMBO!`, "ok");
+          }
+          
+          // Level up check
+          if (platformsCleared >= PLATFORMS_PER_LEVEL) {
+            // Calculate time bonus
+            const elapsed = Date.now() - levelStartTime;
+            const remaining = Math.max(0, levelTimeLimit - elapsed);
+            const timeBonus = Math.floor((remaining / 1000) * 5); // 5 points per second remaining
+            const levelBonus = 50 * level;
+            
+            // Trigger level complete animation
+            triggerLevelComplete(levelBonus, timeBonus);
+            
+            // Add score after a delay
+            setTimeout(() => {
+              score += levelBonus + timeBonus;
+              updateUI();
+            }, 800);
+            
+            level++;
+            platformsCleared = 0;
+            
+            log(`🎉 LEVEL ${level}!`, "ok");
+            
+            // FRYER BASKET appears at level 10!
+            if (level === 10 && fryerBasket) {
+              fryerBasket.visible = true;
+              scene.background = new THREE.Color(0x4a3020); // Darker fryer oil color
+              scene.fog = new THREE.Fog(0x4a3020, 10, 40); // Oil mist
+              
+              // Change lava to deep fryer oil
+              lava.material.color.setHex(0x8B6914); // Golden brown oil
+              lava.material.emissive.setHex(0xD4A76A); // Golden glow
+              lava.material.emissiveIntensity = 0.8;
+              
+              log("🍟 ENTERING THE DEEP FRYER!", "ok");
+            }
+            
+            // Announce new platform type
+            const newType = getPlatformTypeForLevel(level);
+            const typeNames = {
+              'butter': '🧈 Butter Platforms',
+              'melting_butter': '💧 Melting Butter - Watch them drip!',
+              'charcoal': '⚫ Charcoal Platforms',
+              'burning_charcoal': '🔥 Burning Charcoal - Extra hot!',
+              'obsidian': '💎 Obsidian Glass - Slippery!',
+              'lava_rock': '🌋 Lava Rock - Scorching!',
+              'crystal': '✨ Volcanic Crystals - Shimmering!',
+              'ash': '💨 Compressed Ash',
+              'magma_core': '☄️ MAGMA CORE - EXTREME DANGER!'
+            };
+            
+            if (typeNames[newType]) {
+              log(typeNames[newType], "ok");
+            }
+            
+            // Set new time limit based on level
+            if (level <= 5) {
+              levelTimeLimit = BASE_TIME_EARLY; // 15 seconds for levels 1-5
+            } else {
+              levelTimeLimit = BASE_TIME_LATER; // 10.5 seconds for level 6+
+            }
+            levelStartTime = Date.now();
+            timerWarningShown = false;
+            
+            // Platforms continue endlessly - no reset needed!
+          }
+          
+          updateUI();
+        }
+        break;
+      }
+    }
+
+    if (!jumping && currentPlatform) {
+      const distToLava = currentPlatform.position.y - lavaY;
+      
+      // Platform-specific heat mechanics
+      let baseSizzleRate = SIZZLE_RATE;
+      let platformDangerBonus = 0;
+      
+      // Burning charcoal heats you up faster
+      if (currentPlatform.userData.type === 'burning_charcoal') {
+        baseSizzleRate *= 1.5;
+        platformDangerBonus = 0.3;
+      }
+      
+      // Lava rock is extremely hot
+      if (currentPlatform.userData.type === 'lava_rock') {
+        baseSizzleRate *= 2.0;
+        platformDangerBonus = 0.5;
+      }
+      
+      // Magma core is deadly
+      if (currentPlatform.userData.type === 'magma_core') {
+        baseSizzleRate *= 3.0;
+        platformDangerBonus = 0.7;
+      }
+      
+      // Obsidian is slippery but cooler
+      if (currentPlatform.userData.type === 'obsidian') {
+        baseSizzleRate *= 0.7;
+      }
+      
+      // Crystal platforms are magical and protect you
+      if (currentPlatform.userData.type === 'crystal') {
+        baseSizzleRate *= 0.5;
+        sizzle -= SIZZLE_DECAY * 2 * dt * 60; // Extra cooling
+      }
+      
+      if (distToLava < CLOSE_TO_LAVA) {
+        sizzle += baseSizzleRate * (CLOSE_TO_LAVA - distToLava) / CLOSE_TO_LAVA * dt * 60;
+        const heatFactor = Math.min(1, (1 - (distToLava / CLOSE_TO_LAVA)) + platformDangerBonus);
+        
+        // Heat up platform (turn red)
+        const redColor = new THREE.Color(0xff0000);
+        currentPlatform.material.color.copy(currentPlatform.userData.baseColor).lerp(redColor, heatFactor);
+        currentPlatform.material.emissiveIntensity = 0.3 + heatFactor * 1.2;
+        
+        // Heat up potato body
+        if (player.userData.body) {
+          const potatoBaseColor = new THREE.Color(0xd4a574);
+          const potatoHotColor = new THREE.Color(0xff6b4a);
+          player.userData.body.material.color.copy(potatoBaseColor).lerp(potatoHotColor, heatFactor * 0.8);
+          player.userData.body.material.emissiveIntensity = 0.05 + heatFactor * 0.4;
+          
+          // Shake potato when very hot
+          if (heatFactor > 0.7) {
+            player.position.x += (Math.random() - 0.5) * 0.02 * heatFactor;
+            player.position.z += (Math.random() - 0.5) * 0.02 * heatFactor;
+          }
+        }
+      } else {
+        sizzle -= SIZZLE_DECAY * dt * 60;
+        
+        // Cool down platform
+        currentPlatform.material.color.lerp(currentPlatform.userData.baseColor, 0.05);
+        currentPlatform.material.emissiveIntensity = Math.max(0.3, currentPlatform.material.emissiveIntensity - 0.05);
+        
+        // Cool down potato
+        if (player.userData.body) {
+          const potatoBaseColor = new THREE.Color(0xd4a574);
+          player.userData.body.material.color.lerp(potatoBaseColor, 0.1);
+          player.userData.body.material.emissiveIntensity = Math.max(0.05, player.userData.body.material.emissiveIntensity - 0.02);
+        }
+      }
+      sizzle = Math.max(0, Math.min(sizzle, MAX_SIZZLE));
+
+      if (sizzle > SIZZLE_THRESHOLD && Math.random() < 0.3) {
+        emitSteam(player.position, 2);
+      }
+
+      if (sizzle >= MAX_SIZZLE) {
+        triggerFail("🔥 Overheated!");
+      }
+    } else {
+      sizzle -= SIZZLE_DECAY * dt * 60;
+      sizzle = Math.max(0, sizzle);
+      
+      // Cool down potato when jumping
+      if (player.userData.body) {
+        const potatoBaseColor = new THREE.Color(0xd4a574);
+        player.userData.body.material.color.lerp(potatoBaseColor, 0.1);
+        player.userData.body.material.emissiveIntensity = Math.max(0.05, player.userData.body.material.emissiveIntensity - 0.02);
+      }
+    }
+
+    if (player.position.y - 0.5 < lavaY + 0.3) triggerFail();
+
+    // Track highest point and generate platforms ahead
+    if (player.position.y > highestPlayerY) {
+      highestPlayerY = player.position.y;
+      generatePlatformsAhead();
+    }
+    
+    // Clean up old platforms behind player
+    if (platforms.length > 50) {
+      cleanupOldPlatforms();
+    }
+
+    // Camera rotation and positioning
+    if (autoRotate) {
+      cameraRotation += AUTO_ROTATE_SPEED * dt * 60;
+    }
+    
+    // Manual rotation controls
+    if (rotateLeft) {
+      cameraRotation -= MANUAL_ROTATE_SPEED * dt * 60;
+      autoRotate = false; // Disable auto-rotate when manually controlling
+    }
+    if (rotateRight) {
+      cameraRotation += MANUAL_ROTATE_SPEED * dt * 60;
+      autoRotate = false;
+    }
+    
+    // Keep rotation in 0-360 range
+    cameraRotation = cameraRotation % 360;
+    
+    // Position camera in orbit around player
+    const cameraDistance = 10;
+    const cameraHeight = player.position.y + 4;
+    const angleRad = (cameraRotation * Math.PI) / 180;
+    
+    const targetCameraX = player.position.x + Math.sin(angleRad) * cameraDistance;
+    const targetCameraZ = player.position.z + Math.cos(angleRad) * cameraDistance;
+    
+    // Smooth camera follow
+    camera.position.x += (targetCameraX - camera.position.x) * 0.1;
+    camera.position.y += (cameraHeight - camera.position.y) * 0.1;
+    camera.position.z += (targetCameraZ - camera.position.z) * 0.1;
+    
+    // Apply screen shake
+    if (screenShake > 0.01) {
+      const shakeX = (Math.random() - 0.5) * screenShake * 0.5;
+      const shakeY = (Math.random() - 0.5) * screenShake * 0.5;
+      const shakeZ = (Math.random() - 0.5) * screenShake * 0.5;
+      camera.position.x += shakeX;
+      camera.position.y += shakeY;
+      camera.position.z += shakeZ;
+      
+      // Decay shake over time
+      screenShake *= screenShakeDecay;
+    } else {
+      screenShake = 0;
+    }
+    
+    // Always look at player
+    camera.lookAt(player.position.x, player.position.y, player.position.z);
+  }
+
+  if (failed && deathAnimationTimer > 0) {
+    deathAnimationTimer -= dt;
+    
+    // Just sink straight down into lava
+    player.position.y -= dt * 3;
+    
+    // Slight rotation as sinking
+    player.rotation.z += dt * 2;
+    
+    // Emit steam as sinking
+    if (Math.random() < 0.3) {
+      emitSteam(player.position, 1);
+    }
+    
+    // When potato reaches lava surface - EXPLODE INTO FRIES!
+    if (player.position.y <= lavaY + 0.5 && !friesExploded) {
+      friesExploded = true;
+      screenShake = 3.0; // MASSIVE screen shake on explosion!
+      
+      // Death flash effect
+      const deathFlash = document.getElementById('death-flash');
+      if (deathFlash) {
+        deathFlash.style.background = 'rgba(255, 50, 0, 0.7)';
+        setTimeout(() => {
+          deathFlash.style.background = 'rgba(255, 50, 0, 0)';
+        }, 150);
+      }
+      
+      player.visible = false;
+      createFriesExplosion();
+      log("🔥 Tap to retry!", "no");
+    }
+  }
+
+  renderer.render(scene, camera);
+}
+
+// ===== UI ACTIONS =====
+resetBtn.addEventListener("click", reset);
+helpBtn.addEventListener("click", () => {
+  log("🎮 TAP platforms to jump!", "ok");
+  log("🔥 Lava rises - gets FASTER each level!", "ok");
+  log("💥 Watch for bursting fire pods!", "ok");
+  log("♾️ Platforms are ENDLESS - climb forever!", "ok");
+  log("🌡️ Watch the sizzle meter!");
+  log("⏱️ Complete 8 platforms before time runs out!");
+  log("⭐ Golden platforms = 5x points!");
+  log("🔗 Chain jumps for combo multipliers!");
+  log("◄ ► Rotate camera to see all platforms!", "ok");
+});
+
+// Keyboard controls for camera rotation
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+    rotateLeft = true;
+  }
+  if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+    rotateRight = true;
+  }
+  if (e.key === ' ' || e.key === 'Spacebar') {
+    e.preventDefault();
+    autoRotate = !autoRotate; // Toggle auto-rotate with spacebar
+    const statusEl = document.getElementById('auto-rotate-status');
+    if (statusEl) {
+      statusEl.textContent = autoRotate ? 'AUTO ON' : 'AUTO OFF';
+      statusEl.style.color = autoRotate ? 'var(--good)' : 'var(--muted)';
+    }
+  }
+});
+
+document.addEventListener('keyup', (e) => {
+  if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+    rotateLeft = false;
+  }
+  if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+    rotateRight = false;
+  }
+});
+
+// Mobile rotation buttons
+const rotateLeftBtn = document.getElementById('rotate-left-btn');
+const rotateRightBtn = document.getElementById('rotate-right-btn');
+const rotateLeftDesktop = document.getElementById('rotate-left-desktop');
+const rotateRightDesktop = document.getElementById('rotate-right-desktop');
+
+if (rotateLeftBtn) {
+  rotateLeftBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    rotateLeft = true;
+  });
+  rotateLeftBtn.addEventListener('touchend', () => {
+    rotateLeft = false;
+  });
+  rotateLeftBtn.addEventListener('mousedown', () => {
+    rotateLeft = true;
+  });
+  rotateLeftBtn.addEventListener('mouseup', () => {
+    rotateLeft = false;
+  });
+}
+
+if (rotateRightBtn) {
+  rotateRightBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    rotateRight = true;
+  });
+  rotateRightBtn.addEventListener('touchend', () => {
+    rotateRight = false;
+  });
+  rotateRightBtn.addEventListener('mousedown', () => {
+    rotateRight = true;
+  });
+  rotateRightBtn.addEventListener('mouseup', () => {
+    rotateRight = false;
+  });
+}
+
+if (rotateLeftDesktop) {
+  rotateLeftDesktop.addEventListener('mousedown', () => {
+    rotateLeft = true;
+  });
+  rotateLeftDesktop.addEventListener('mouseup', () => {
+    rotateLeft = false;
+  });
+}
+
+if (rotateRightDesktop) {
+  rotateRightDesktop.addEventListener('mousedown', () => {
+    rotateRight = true;
+  });
+  rotateRightDesktop.addEventListener('mouseup', () => {
+    rotateRight = false;
+  });
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+const menuBtn = document.getElementById('mobileMenuBtn');
+const side = document.getElementById('side');
+if (menuBtn && side) {
+  menuBtn.addEventListener('click', () => side.classList.toggle('open'));
+}
+
+// ===== BOOT =====
+highestPlayerY = 1;
+spawnPlatforms();
+levelStartTime = Date.now();
+updateUI();
+log("🥔 Mr. Potato Head escaping!", "ok");
+log("👆 TAP to run! HOLD to boost!", "ok");
+update();
+</script>
+</body>
+</html>
