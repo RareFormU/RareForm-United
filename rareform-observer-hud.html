@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAREFORM // OBSERVER PROTOCOL</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne+Mono&family=Bebas+Neue&family=Syne:wght@400;600;800&display=swap');
+
+/* ── TOKENS ─────────────────────────────────────────────────── */
+:root {
+  --queen:      #00ffc8;
+  --queen-dim:  rgba(0,255,200,0.12);
+  --queen-mid:  rgba(0,255,200,0.35);
+  --sol:        #9945FF;
+  --xrp:        #00AAE4;
+  --sui:        #4DA2FF;
+  --danger:     #FF3D6B;
+  --warn:       #FFB830;
+  --bg:         #020b08;
+  --glass-bg:   rgba(0,255,200,0.04);
+  --glass-b:    rgba(0,255,200,0.18);
+  --text-dim:   rgba(0,255,200,0.45);
+  --text-mid:   rgba(0,255,200,0.75);
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-mono:    'Syne Mono', monospace;
+  --font-body:    'Syne', sans-serif;
+}
+
+/* ── RESET & BASE ────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  min-height: 100vh;
+  font-family: var(--font-mono);
+  color: var(--queen);
+  overflow: hidden;
+  cursor: none;
+}
+
+/* ── CURSOR ──────────────────────────────────────────────────── */
+#cursor {
+  position: fixed;
+  width: 16px; height: 16px;
+  border: 1px solid var(--queen);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%,-50%);
+  transition: width .15s, height .15s, opacity .15s;
+  mix-blend-mode: exclusion;
+}
+#cursor::after {
+  content:'';
+  position: absolute;
+  inset: 4px;
+  background: var(--queen);
+  border-radius: 50%;
+}
+#cursor.big { width: 32px; height: 32px; }
+
+/* ── WORLD BG (simulated PS1 grid) ──────────────────────────── */
+#world {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(0,255,200,0.04) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(0,255,200,0.04) 40px);
+  background-size: 40px 40px;
+  animation: worldDrift 20s linear infinite;
+}
+@keyframes worldDrift {
+  from { background-position: 0 0, 0 0; }
+  to   { background-position: 0 200px, 200px 0; }
+}
+
+/* radial vignette */
+#world::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 70% at 50% 50%, transparent 20%, var(--bg) 100%);
+}
+
+/* scanlines */
+#scanlines {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent, transparent 3px,
+    rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 4px
+  );
+  pointer-events: none;
+}
+
+/* grain */
+#grain {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  opacity: .035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grainShift .12s steps(2) infinite;
+  pointer-events: none;
+}
+@keyframes grainShift {
+  0%  { background-position: 0 0; }
+  50% { background-position: 40px 20px; }
+}
+
+/* ── MAIN HUD CONTAINER ──────────────────────────────────────── */
+#hud {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  grid-template-columns: 280px 1fr 280px;
+  gap: 0;
+  padding: 20px;
+  pointer-events: none;
+}
+
+/* ── GLASS PANEL BASE ────────────────────────────────────────── */
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-b);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  position: relative;
+  overflow: hidden;
+}
+
+/* glass shimmer */
+.glass::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0,255,200,0.04), transparent);
+  animation: shimmer 6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes shimmer {
+  0%,100% { left: -100%; }
+  50%      { left: 150%; }
+}
+
+/* corner ticks */
+.glass::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--bg),var(--bg)) padding-box,
+    linear-gradient(135deg, var(--queen) 0%, transparent 30%, transparent 70%, var(--queen) 100%) border-box;
+  opacity: .3;
+  pointer-events: none;
+}
+
+/* ── PANEL LABEL ─────────────────────────────────────────────── */
+.panel-label {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: .35em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.panel-label::before {
+  content: '';
+  display: inline-block;
+  width: 3px; height: 3px;
+  background: var(--queen);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--queen);
+}
+
+/* ── TOP BAR ─────────────────────────────────────────────────── */
+#top-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  margin-bottom: 14px;
+}
+#top-bar .logo {
+  font-family: var(--font-display);
+  font-size: 28px;
+  letter-spacing: .3em;
+  text-shadow: 0 0 30px var(--queen), 0 0 60px rgba(0,255,200,.3);
+  animation: logoPulse 4s ease-in-out infinite;
+}
+@keyframes logoPulse {
+  0%,100% { text-shadow: 0 0 20px var(--queen), 0 0 50px rgba(0,255,200,.2); }
+  50%      { text-shadow: 0 0 40px var(--queen), 0 0 80px rgba(0,255,200,.5), 0 0 120px rgba(0,255,200,.15); }
+}
+
+#top-bar .status-cluster {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  font-size: 10px;
+  letter-spacing: .15em;
+  color: var(--text-dim);
+}
+.status-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--queen);
+  box-shadow: 0 0 8px var(--queen);
+  animation: dotBlink 2s ease-in-out infinite;
+  margin-right: 5px;
+}
+@keyframes dotBlink {
+  0%,100% { opacity: 1; }
+  50%      { opacity: .3; }
+}
+
+#top-bar .sys-time {
+  font-size: 11px;
+  color: var(--text-mid);
+}
+
+/* ── LEFT COLUMN ─────────────────────────────────────────────── */
+#col-left {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Observer Status */
+#observer-status {
+  padding: 16px;
+  flex-shrink: 0;
+}
+
+.observer-avatar {
+  width: 60px; height: 60px;
+  border: 1px solid var(--glass-b);
+  border-radius: 50%;
+  margin: 0 auto 12px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.observer-avatar::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: conic-gradient(var(--queen) 0deg, transparent 120deg, var(--queen) 240deg, transparent 360deg);
+  animation: avatarSpin 4s linear infinite;
+  opacity: .5;
+}
+@keyframes avatarSpin { to { transform: rotate(360deg); } }
+
+.observer-avatar .inner {
+  position: relative;
+  width: 52px; height: 52px;
+  background: var(--bg);
+  border-radius: 50%;
+  border: 1px solid var(--queen-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.observer-name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: .2em;
+  text-align: center;
+  margin-bottom: 4px;
+}
+.observer-role {
+  font-size: 9px;
+  letter-spacing: .25em;
+  color: var(--text-dim);
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.observer-stats .row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-dim);
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(0,255,200,0.06);
+}
+.observer-stats .row .val { color: var(--queen); }
+
+/* Chain liquidity */
+#liquidity {
+  padding: 16px;
+  flex: 1;
+}
+
+.chain-row {
+  margin-bottom: 14px;
+}
+.chain-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  margin-bottom: 5px;
+}
+.chain-name { letter-spacing: .15em; }
+.chain-val  { color: var(--text-mid); }
+
+.chain-bar {
+  height: 3px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+.chain-fill {
+  height: 100%;
+  border-radius: 2px;
+  position: relative;
+  transition: width 1s cubic-bezier(.4,0,.2,1);
+}
+.chain-fill::after {
+  content: '';
+  position: absolute;
+  right: 0; top: 0;
+  width: 8px; height: 100%;
+  background: white;
+  filter: blur(2px);
+  opacity: .7;
+}
+
+.sol-fill { background: linear-gradient(90deg, rgba(153,69,255,.4), #9945FF); }
+.xrp-fill { background: linear-gradient(90deg, rgba(0,170,228,.4), #00AAE4); }
+.sui-fill { background: linear-gradient(90deg, rgba(77,162,255,.4), #4DA2FF); }
+
+.chain-sub {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--text-dim);
+  margin-top: 3px;
+}
+
+/* ── CENTER COLUMN ───────────────────────────────────────────── */
+#col-center {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 14px;
+}
+
+/* Queen's Moves — hero panel */
+#queens-moves {
+  padding: 18px 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.queens-title {
+  font-family: var(--font-display);
+  font-size: 32px;
+  letter-spacing: .25em;
+  text-shadow: 0 0 30px var(--queen);
+  margin-bottom: 2px;
+  line-height: 1;
+}
+.queens-sub {
+  font-size: 9px;
+  letter-spacing: .3em;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+}
+
+.move-feed {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.move-item {
+  display: grid;
+  grid-template-columns: 28px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  background: rgba(0,0,0,.2);
+  position: relative;
+  animation: moveIn .4s cubic-bezier(.4,0,.2,1) both;
+  font-size: 11px;
+}
+@keyframes moveIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.move-item.alert-high {
+  border-color: rgba(255,61,107,.25);
+  background: rgba(255,61,107,.05);
+}
+.move-item.alert-high::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--danger);
+  box-shadow: 0 0 8px var(--danger);
+}
+
+.move-item.alert-mid {
+  border-color: rgba(255,184,48,.2);
+  background: rgba(255,184,48,.04);
+}
+.move-item.alert-mid::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--warn);
+  box-shadow: 0 0 8px var(--warn);
+}
+
+.move-item.alert-low {
+  border-color: var(--glass-b);
+}
+.move-item.alert-low::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--queen-mid);
+}
+
+.move-chain-icon {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-family: var(--font-display);
+  letter-spacing: 0;
+}
+.ic-sol { background: rgba(153,69,255,.2); color: #9945FF; border: 1px solid rgba(153,69,255,.4); }
+.ic-xrp { background: rgba(0,170,228,.2); color: #00AAE4; border: 1px solid rgba(0,170,228,.4); }
+.ic-sui { background: rgba(77,162,255,.2); color: #4DA2FF; border: 1px solid rgba(77,162,255,.4); }
+
+.move-desc { color: var(--text-mid); letter-spacing: .05em; }
+.move-desc span { color: var(--queen); }
+
+.move-amount {
+  font-family: var(--font-display);
+  font-size: 14px;
+  letter-spacing: .1em;
+  white-space: nowrap;
+}
+.move-time {
+  font-size: 9px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* Pulse ring around move feed */
+.queen-ring {
+  position: absolute;
+  border: 1px solid rgba(0,255,200,.08);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: queenRing 3s ease-out infinite;
+}
+@keyframes queenRing {
+  0%   { opacity: .5; transform: translate(-50%,-50%) scale(.9); }
+  100% { opacity: 0;  transform: translate(-50%,-50%) scale(1.4); }
+}
+
+/* ── BOTTOM CENTER — wraparound ring ────────────────────────── */
+#ring-bar {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  margin-top: 12px;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  justify-content: space-between;
+  overflow: hidden;
+}
+
+.ring-segment {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 10px;
+  letter-spacing: .12em;
+  color: var(--text-dim);
+  padding: 0 20px;
+  position: relative;
+}
+.ring-segment + .ring-segment::before {
+  content: '//';
+  position: absolute;
+  left: 0;
+  color: rgba(0,255,200,.2);
+  letter-spacing: 0;
+}
+
+.ring-val {
+  font-family: var(--font-display);
+  font-size: 16px;
+  letter-spacing: .1em;
+  color: var(--queen);
+}
+.ring-label {
+  font-size: 9px;
+  letter-spacing: .2em;
+  color: var(--text-dim);
+  display: block;
+}
+
+/* horizontal marquee */
+.ring-marquee {
+  flex: 1;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, black 5%, black 95%, transparent);
+}
+.ring-marquee-inner {
+  display: flex;
+  gap: 40px;
+  width: max-content;
+  animation: marquee 30s linear infinite;
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: .12em;
+}
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+.marquee-item { white-space: nowrap; }
+.marquee-item .up   { color: var(--queen); }
+.marquee-item .down { color: var(--danger); }
+
+/* ── RIGHT COLUMN ────────────────────────────────────────────── */
+#col-right {
+  grid-column: 3;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Wallet snapshot */
+#wallet {
+  padding: 16px;
+  flex-shrink: 0;
+}
+
+.wallet-total {
+  font-family: var(--font-display);
+  font-size: 30px;
+  letter-spacing: .1em;
+  line-height: 1;
+  margin-bottom: 3px;
+}
+.wallet-label {
+  font-size: 9px;
+  letter-spacing: .25em;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+}
+
+.wallet-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(0,255,200,0.06);
+  font-size: 10px;
+}
+.wallet-row:last-child { border: none; }
+.wallet-chain { display: flex; align-items: center; gap: 8px; }
+.wallet-dot { width: 6px; height: 6px; border-radius: 50%; }
+.wallet-amount { color: var(--text-mid); }
+.wallet-change { font-size: 9px; }
+.pos { color: var(--queen); }
+.neg { color: var(--danger); }
+
+/* Observer log */
+#observer-log {
+  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.log-feed {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.log-line {
+  font-size: 9.5px;
+  color: var(--text-dim);
+  letter-spacing: .08em;
+  line-height: 1.5;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(0,255,200,0.04);
+  animation: logFade .5s ease both;
+}
+@keyframes logFade {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.log-line .accent { color: var(--queen); }
+.log-line .time { color: rgba(0,255,200,.3); font-size: 9px; }
+
+/* ── ALERT OVERLAY ───────────────────────────────────────────── */
+#alert-overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .3s;
+}
+#alert-overlay.show { opacity: 1; }
+
+.alert-pulse {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 300px; height: 300px;
+  border: 1px solid var(--danger);
+  border-radius: 50%;
+  transform: translate(-50%,-50%);
+  animation: alertPulse 1s ease-out infinite;
+}
+.alert-pulse:nth-child(2) { animation-delay: .3s; opacity: .6; }
+.alert-pulse:nth-child(3) { animation-delay: .6s; opacity: .3; }
+@keyframes alertPulse {
+  0%   { transform: translate(-50%,-50%) scale(.5); opacity: .8; }
+  100% { transform: translate(-50%,-50%) scale(2);  opacity: 0; }
+}
+
+.alert-text {
+  position: relative;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: .4em;
+  color: var(--danger);
+  text-shadow: 0 0 20px var(--danger);
+  width: 300px;
+  transform: translateX(-50%);
+  left: 50%;
+}
+
+/* ── MISC ────────────────────────────────────────────────────── */
+.blink-slow { animation: blinkSlow 2s step-end infinite; }
+@keyframes blinkSlow { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="world"></div>
+<div id="scanlines"></div>
+<div id="grain"></div>
+
+<!-- ALERT OVERLAY -->
+<div id="alert-overlay">
+  <div class="alert-pulse"></div>
+  <div class="alert-pulse"></div>
+  <div class="alert-pulse"></div>
+  <div class="alert-text" id="alert-text">QUEEN'S MOVE DETECTED</div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+
+  <!-- TOP BAR -->
+  <div id="top-bar" class="glass">
+    <div class="logo">RAREFORM // OBSERVER</div>
+    <div class="status-cluster">
+      <span><span class="status-dot"></span>PROTOCOL ACTIVE</span>
+      <span><span class="status-dot" style="background:var(--sol);box-shadow:0 0 8px var(--sol);animation-delay:.3s"></span>SOL</span>
+      <span><span class="status-dot" style="background:var(--xrp);box-shadow:0 0 8px var(--xrp);animation-delay:.6s"></span>XRP</span>
+      <span><span class="status-dot" style="background:var(--sui);box-shadow:0 0 8px var(--sui);animation-delay:.9s"></span>SUI</span>
+    </div>
+    <div class="sys-time" id="sys-time">--:--:-- UTC</div>
+  </div>
+
+  <!-- LEFT COL -->
+  <div id="col-left">
+
+    <!-- Observer Status -->
+    <div id="observer-status" class="glass">
+      <div class="panel-label">Observer Status</div>
+      <div class="observer-avatar">
+        <div class="inner">◈</div>
+      </div>
+      <div class="observer-name">OBSERVER Ø1</div>
+      <div class="observer-role">FREE VIEWER // OUTSIDE HIERARCHY</div>
+      <div class="observer-stats">
+        <div class="row"><span>MODE</span><span class="val blink-slow">ACTIVE WATCH</span></div>
+        <div class="row"><span>MOVES LOGGED</span><span class="val" id="moves-logged">0</span></div>
+        <div class="row"><span>CHAIN SYNC</span><span class="val">99.8%</span></div>
+        <div class="row"><span>TRUTH LAYER</span><span class="val">v2.4.1</span></div>
+        <div class="row"><span>UPTIME</span><span class="val" id="uptime">00:00:00</span></div>
+      </div>
+    </div>
+
+    <!-- Chain Liquidity -->
+    <div id="liquidity" class="glass">
+      <div class="panel-label">Chain Liquidity Pulse</div>
+
+      <div class="chain-row">
+        <div class="chain-header">
+          <span class="chain-name" style="color:var(--sol)">SOLANA</span>
+          <span class="chain-val" id="sol-vol">$0B</span>
+        </div>
+        <div class="chain-bar"><div class="chain-fill sol-fill" id="sol-bar" style="width:0%"></div></div>
+        <div class="chain-sub"><span id="sol-tps">0 TPS</span><span id="sol-change">—</span></div>
+      </div>
+
+      <div class="chain-row">
+        <div class="chain-header">
+          <span class="chain-name" style="color:var(--xrp)">XRP LEDGER</span>
+          <span class="chain-val" id="xrp-vol">$0B</span>
+        </div>
+        <div class="chain-bar"><div class="chain-fill xrp-fill" id="xrp-bar" style="width:0%"></div></div>
+        <div class="chain-sub"><span id="xrp-tps">0 TPS</span><span id="xrp-change">—</span></div>
+      </div>
+
+      <div class="chain-row">
+        <div class="chain-header">
+          <span class="chain-name" style="color:var(--sui)">SUI NETWORK</span>
+          <span class="chain-val" id="sui-vol">$0B</span>
+        </div>
+        <div class="chain-bar"><div class="chain-fill sui-fill" id="sui-bar" style="width:0%"></div></div>
+        <div class="chain-sub"><span id="sui-tps">0 TPS</span><span id="sui-change">—</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CENTER COL -->
+  <div id="col-center">
+
+    <!-- Queen's Moves -->
+    <div id="queens-moves" class="glass">
+      <div class="queens-title">QUEEN'S MOVES</div>
+      <div class="queens-sub">HIGH-VALUE TRANSACTION FEED // REAL-TIME</div>
+      <div class="move-feed" id="move-feed">
+        <!-- injected by JS -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT COL -->
+  <div id="col-right">
+
+    <!-- Wallet Snapshot -->
+    <div id="wallet" class="glass">
+      <div class="panel-label">Portfolio Snapshot</div>
+      <div class="wallet-total" id="wallet-total">$0.00</div>
+      <div class="wallet-label">ESTIMATED VALUE // SELF-CUSTODY</div>
+      <div class="wallet-row">
+        <div class="wallet-chain"><div class="wallet-dot" style="background:var(--sol)"></div>SOL</div>
+        <span class="wallet-amount" id="w-sol">0.00 SOL</span>
+        <span class="wallet-change pos" id="wc-sol">+0.00%</span>
+      </div>
+      <div class="wallet-row">
+        <div class="wallet-chain"><div class="wallet-dot" style="background:var(--xrp)"></div>XRP</div>
+        <span class="wallet-amount" id="w-xrp">0 XRP</span>
+        <span class="wallet-change pos" id="wc-xrp">+0.00%</span>
+      </div>
+      <div class="wallet-row">
+        <div class="wallet-chain"><div class="wallet-dot" style="background:var(--sui)"></div>SUI</div>
+        <span class="wallet-amount" id="w-sui">0.00 SUI</span>
+        <span class="wallet-change pos" id="wc-sui">+0.00%</span>
+      </div>
+    </div>
+
+    <!-- Observer Log -->
+    <div id="observer-log" class="glass">
+      <div class="panel-label">Observer Log</div>
+      <div class="log-feed" id="log-feed">
+        <!-- injected by JS -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM RING BAR -->
+  <div id="ring-bar" class="glass">
+    <div class="ring-segment">
+      <div>
+        <span class="ring-label">TOTAL MOVES</span>
+        <span class="ring-val" id="ring-moves">0</span>
+      </div>
+    </div>
+    <div class="ring-marquee">
+      <div class="ring-marquee-inner" id="marquee-inner">
+        <!-- injected -->
+      </div>
+    </div>
+    <div class="ring-segment">
+      <div>
+        <span class="ring-label">QUEEN ACTIVITY</span>
+        <span class="ring-val" id="ring-activity">LOW</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// DATA LAYER — swap these functions for live API calls later
+// ═══════════════════════════════════════════════════════════
+
+// MOCK DATA STRUCTURE — matches what live feeds will return
+const MockDataService = {
+  chains: {
+    sol: { name: 'SOLANA', volume: 0, tps: 0, change: 0, price: 148.20 },
+    xrp: { name: 'XRP',    volume: 0, tps: 0, change: 0, price: 2.14  },
+    sui: { name: 'SUI',    volume: 0, tps: 0, change: 0, price: 3.82  }
+  },
+  wallet: {
+    sol: { amount: 24.5,   change: 0 },
+    xrp: { amount: 12000,  change: 0 },
+    sui: { amount: 850,    change: 0 }
+  },
+
+  // ← REPLACE THIS with live Helius/XRPL/Sui RPC call
+  tick() {
+    this.chains.sol.volume = 4.2 + (Math.random() - 0.4) * 1.2;
+    this.chains.sol.tps    = Math.floor(3200 + Math.random() * 800);
+    this.chains.sol.change = (Math.random() - 0.4) * 6;
+
+    this.chains.xrp.volume = 1.8 + (Math.random() - 0.4) * 0.6;
+    this.chains.xrp.tps    = Math.floor(1200 + Math.random() * 400);
+    this.chains.xrp.change = (Math.random() - 0.4) * 4;
+
+    this.chains.sui.volume = 0.9 + (Math.random() - 0.4) * 0.4;
+    this.chains.sui.tps    = Math.floor(800 + Math.random() * 300);
+    this.chains.sui.change = (Math.random() - 0.4) * 8;
+
+    this.wallet.sol.change = (Math.random() - 0.4) * 3;
+    this.wallet.xrp.change = (Math.random() - 0.4) * 3;
+    this.wallet.sui.change = (Math.random() - 0.4) * 3;
+  },
+
+  // ← REPLACE THIS with live large-tx webhook
+  generateMove() {
+    const chains = ['SOL','XRP','SUI'];
+    const chain  = chains[Math.floor(Math.random() * 3)];
+    const amount = Math.random();
+    let tier, value;
+
+    if (amount > 0.93) {
+      tier  = 'high';
+      value = (500 + Math.random() * 9500).toFixed(0);
+    } else if (amount > 0.75) {
+      tier  = 'mid';
+      value = (50 + Math.random() * 450).toFixed(0);
+    } else {
+      tier  = 'low';
+      value = (1 + Math.random() * 49).toFixed(0);
+    }
+
+    const actions = ['WHALE TRANSFER','DEX SWAP','BRIDGE MOVE','CEX OUTFLOW','STAKE DEPOSIT','NFT SETTLE'];
+    const action  = actions[Math.floor(Math.random() * actions.length)];
+    const addr    = () => Math.random().toString(36).substring(2,7).toUpperCase();
+
+    return {
+      chain, tier, value: parseInt(value),
+      action,
+      from: addr(), to: addr(),
+      time: new Date().toISOString()
+    };
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
+// OBSERVER RUNTIME
+// ═══════════════════════════════════════════════════════════
+
+let movesLogged = 0;
+let startTime   = Date.now();
+const moves     = [];
+const logs      = [];
+
+// Clock
+function updateClock() {
+  const now = new Date();
+  document.getElementById('sys-time').textContent =
+    now.toUTCString().split(' ')[4] + ' UTC';
+
+  const up = Math.floor((Date.now() - startTime) / 1000);
+  const hh = String(Math.floor(up / 3600)).padStart(2,'0');
+  const mm = String(Math.floor((up % 3600) / 60)).padStart(2,'0');
+  const ss = String(up % 60).padStart(2,'0');
+  document.getElementById('uptime').textContent = `${hh}:${mm}:${ss}`;
+}
+setInterval(updateClock, 1000);
+
+// Chain data
+function updateChains() {
+  MockDataService.tick();
+  const d = MockDataService.chains;
+
+  const maxVol = Math.max(d.sol.volume, d.xrp.volume, d.sui.volume, 0.1);
+
+  const fmt = (n, sign=false) => (sign && n>0?'+':'') + n.toFixed(2);
+  const fmtChange = (n, el) => {
+    el.textContent = (n>0?'+':'') + n.toFixed(2) + '%';
+    el.className = 'wallet-change ' + (n>=0?'pos':'neg');
+  };
+
+  document.getElementById('sol-vol').textContent  = '$'+d.sol.volume.toFixed(1)+'B';
+  document.getElementById('sol-tps').textContent  = d.sol.tps.toLocaleString()+' TPS';
+  document.getElementById('sol-bar').style.width  = (d.sol.volume/maxVol*90)+'%';
+  const sc = document.getElementById('sol-change');
+  sc.textContent = (d.sol.change>0?'+':'')+d.sol.change.toFixed(2)+'%';
+  sc.style.color = d.sol.change>=0?'var(--queen)':'var(--danger)';
+
+  document.getElementById('xrp-vol').textContent  = '$'+d.xrp.volume.toFixed(1)+'B';
+  document.getElementById('xrp-tps').textContent  = d.xrp.tps.toLocaleString()+' TPS';
+  document.getElementById('xrp-bar').style.width  = (d.xrp.volume/maxVol*90)+'%';
+  const xc = document.getElementById('xrp-change');
+  xc.textContent = (d.xrp.change>0?'+':'')+d.xrp.change.toFixed(2)+'%';
+  xc.style.color = d.xrp.change>=0?'var(--queen)':'var(--danger)';
+
+  document.getElementById('sui-vol').textContent  = '$'+d.sui.volume.toFixed(1)+'B';
+  document.getElementById('sui-tps').textContent  = d.sui.tps.toLocaleString()+' TPS';
+  document.getElementById('sui-bar').style.width  = (d.sui.volume/maxVol*90)+'%';
+  const uc = document.getElementById('sui-change');
+  uc.textContent = (d.sui.change>0?'+':'')+d.sui.change.toFixed(2)+'%';
+  uc.style.color = d.sui.change>=0?'var(--queen)':'var(--danger)';
+}
+setInterval(updateChains, 2000);
+updateChains();
+
+// Wallet
+function updateWallet() {
+  const d  = MockDataService.wallet;
+  const p  = MockDataService.chains;
+  const total = d.sol.amount*p.sol.price + d.xrp.amount*p.xrp.price + d.sui.amount*p.sui.price;
+  document.getElementById('wallet-total').textContent = '$'+total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('w-sol').textContent = d.sol.amount.toFixed(2)+' SOL';
+  document.getElementById('w-xrp').textContent = d.xrp.amount.toLocaleString()+' XRP';
+  document.getElementById('w-sui').textContent = d.sui.amount.toFixed(2)+' SUI';
+
+  const fmtC = (n,el) => { el.textContent=(n>=0?'+':'')+n.toFixed(2)+'%'; el.className='wallet-change '+(n>=0?'pos':'neg'); };
+  fmtC(d.sol.change, document.getElementById('wc-sol'));
+  fmtC(d.xrp.change, document.getElementById('wc-xrp'));
+  fmtC(d.sui.change, document.getElementById('wc-sui'));
+}
+setInterval(updateWallet, 3000);
+updateWallet();
+
+// Queen's Moves feed
+function addMove(move) {
+  movesLogged++;
+  moves.unshift(move);
+  if (moves.length > 6) moves.pop();
+
+  document.getElementById('moves-logged').textContent = movesLogged;
+  document.getElementById('ring-moves').textContent   = movesLogged;
+
+  // Activity level
+  const recentHighs = moves.filter(m => m.tier === 'high').length;
+  const actEl = document.getElementById('ring-activity');
+  if (recentHighs >= 2)      { actEl.textContent = 'CRITICAL'; actEl.style.color = 'var(--danger)'; }
+  else if (recentHighs >= 1) { actEl.textContent = 'ELEVATED'; actEl.style.color = 'var(--warn)'; }
+  else                       { actEl.textContent = 'NOMINAL';  actEl.style.color = 'var(--queen)'; }
+
+  renderMoves();
+
+  // Alert on high
+  if (move.tier === 'high') triggerAlert(move);
+  addLog(move);
+}
+
+function renderMoves() {
+  const feed = document.getElementById('move-feed');
+  feed.innerHTML = moves.map(m => {
+    const ic = m.chain.toLowerCase();
+    const col = ic==='sol'?'var(--sol)':ic==='xrp'?'var(--xrp)':'var(--sui)';
+    const t = new Date(m.time);
+    const ts = t.getHours().toString().padStart(2,'0')+':'+t.getMinutes().toString().padStart(2,'0')+':'+t.getSeconds().toString().padStart(2,'0');
+    return `
+      <div class="move-item alert-${m.tier}">
+        <div class="move-chain-icon ic-${ic}">${m.chain.substring(0,1)}</div>
+        <div class="move-desc"><span>${m.action}</span> ${m.from}→${m.to}</div>
+        <div class="move-amount" style="color:${m.tier==='high'?'var(--danger)':m.tier==='mid'?'var(--warn)':'var(--queen)'}">${m.value>=1000?(m.value/1000).toFixed(1)+'K':m.value}${m.chain}</div>
+        <div class="move-time">${ts}</div>
+      </div>`;
+  }).join('');
+}
+
+// Observer Log
+const logMessages = [
+  m => `<span class="accent">${m.action}</span> detected on ${m.chain} // ${m.value}${m.chain} moved`,
+  m => `Wallet ${m.from} → ${m.to} // Tier: <span class="accent">${m.tier.toUpperCase()}</span>`,
+  m => `Queen's move pattern recognized // ${m.chain} liquidity shift`,
+  m => `Observer Ø1 flagged: <span class="accent">${m.action}</span> exceeds threshold`,
+  m => `Truth layer update // ${m.chain} node confirmed tx`
+];
+
+function addLog(move) {
+  const msg = logMessages[Math.floor(Math.random()*logMessages.length)](move);
+  const t   = new Date();
+  const ts  = t.getHours().toString().padStart(2,'0')+':'+t.getMinutes().toString().padStart(2,'0')+':'+t.getSeconds().toString().padStart(2,'0');
+  logs.unshift({ msg, ts });
+  if (logs.length > 7) logs.pop();
+
+  const feed = document.getElementById('log-feed');
+  feed.innerHTML = logs.map(l =>
+    `<div class="log-line"><span class="time">[${l.ts}]</span> ${l.msg}</div>`
+  ).join('');
+}
+
+// Alert overlay
+let alertTimeout;
+function triggerAlert(move) {
+  const el = document.getElementById('alert-overlay');
+  document.getElementById('alert-text').textContent = `QUEEN'S MOVE // ${move.value}${move.chain} DETECTED`;
+  el.classList.add('show');
+  clearTimeout(alertTimeout);
+  alertTimeout = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// Marquee
+function buildMarquee() {
+  const items = [
+    ['SOL','$148.20','+2.4%',true], ['XRP','$2.14','+1.1%',true],
+    ['SUI','$3.82','-0.8%',false],  ['SOL','$148.20','+2.4%',true],
+    ['XRP','$2.14','+1.1%',true],   ['SUI','$3.82','-0.8%',false],
+    ['OBSERVER Ø1','ACTIVE','—',true],['QUEEN PROTOCOL','RUNNING','—',true],
+    ['SOL','$148.20','+2.4%',true], ['XRP','$2.14','+1.1%',true],
+    ['SUI','$3.82','-0.8%',false],  ['RAREFORM UNITED','v0.1.0','—',true],
+  ];
+  const mi = document.getElementById('marquee-inner');
+  const html = items.map(([name,price,chg,pos]) =>
+    `<span class="marquee-item">${name} <b>${price}</b> <span class="${pos?'up':'down'}">${chg}</span></span>`
+  ).join('');
+  mi.innerHTML = html + html; // double for seamless loop
+}
+buildMarquee();
+
+// Cursor
+document.addEventListener('mousemove', e => {
+  const c = document.getElementById('cursor');
+  c.style.left = e.clientX+'px';
+  c.style.top  = e.clientY+'px';
+});
+document.addEventListener('mouseover', e => {
+  if (e.target.closest('.glass')) document.getElementById('cursor').classList.add('big');
+  else document.getElementById('cursor').classList.remove('big');
+});
+
+// ── MAIN SIMULATION LOOP ──
+// Replace the setInterval calls below with WebSocket / webhook listeners
+// for live data. The addMove() and updateChains() interfaces stay identical.
+
+function simulateMoves() {
+  const interval = 800 + Math.random() * 3200; // 0.8–4s between moves
+  setTimeout(() => {
+    addMove(MockDataService.generateMove());
+    simulateMoves();
+  }, interval);
+}
+simulateMoves();
+</script>
+</body>
+</html>
